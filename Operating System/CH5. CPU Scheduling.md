@@ -1,121 +1,6 @@
-# CH5. CPU Scheduling
-
-### CPU and I/O Bursts in Program Execution
-
-모든 프로그램은 실행하면서 거치는 다음과 같은 일련의 path가 존재한다.
-
-
-
-![img](https://blog.kakaocdn.net/dn/bF0prX/btqGe9a7Jwt/qi9LrPtbTRj2VFkHsLiqc0/img.png)
-
-
-
-프로그램의`path`는 `CPU`를 사용하는 일과 `I/O` 요청에 대한 응답을 기다리는 일을 반복한다.
-
-`CPU`를 연속적으로 사용하면서 인스트럭션을 수행하는 단계를 `CPU Burst`이라고 부르고,
-
-`I/O`를 수행하는 단계를 `I/O Burst`라고 부른다.
-
-'
-
-#### CPU-burst Time의 분포
-
-
-
-![img](https://blog.kakaocdn.net/dn/bp6TbO/btqGbjT1Z53/hI17cnFRqsgDIkk1pu2qYk/img.png)
-
-
-
-I/O작업이 빈번한 작업(I/O bound job)이 있는 반면, CPU를 많이 사용하는 작업도 있다(CPU bound job).
-
-사용자와 직접적으로 연관이 많은 `interactive job`에게 적절한 `response`를 제공해주어야 한다. 사용자가 너무 오래 기다리지 않도록 스케줄링을 해주어야 하기 때문이다.
-
- 
-
-이처럼 여러 종류의 job(=process)이 섞여 있기 때문에 CPU Scheduling이 필요하다.
-
- 
-
-따라서, 프로세스는 그 특성에 따라 다음 두가지로 나뉘게 된다.
-
-- I/O-bound process
-  - CPU를 잡고 계산하는 시간보다 I/O에 많은 시간이 필요한 job
-  - 짧고 잦은 `CPU burst`
-- CPU-bound process
-  - 계산 위주의 job
-  - 길고 빈번하지 않은 `CPU burst`
+### Scheduling Algorithms
 
 ####  
-
-#### CPU Scheduler / Dispatcher
-
-`CPU Scheduler`는 `Ready` 상태의 프로세스 중에서 `CPU`를 줄 프로세스를 고른다.
-
-`Dispatcher`는 CPU의 제어권을 `CPU Scheduler`에 의해 선택된 프로세스에게 넘긴다. 이 과정을 `Context Switch(문맥 교환)`이라고 한다.
-
-다만 이들은 하드웨어나 소프트웨어를 지칭하는 것이 아니라, **운영체제 내부에서 이러한 역할을 하는 코드의 일부분**을 말한다.
-
- 
-
-#### CPU 스케줄링이 필요한 경우
-
-CPU 스케줄링에는 크게 `preemptive(=강제로 빼앗음)`와 `nonpreemptive(=강제로 빼앗지 않고 자진 반납)`의 경우가 있다.
-
-##### preemptive
-
-`timer interrupt` - 할당 시간 만료로 CPU를 강제로 빼앗고 다른 프로세스에게 넘겨주어야 하는 경우
-
-`device controller의 I/O 완료 interrupt` - I/O 작업을 마쳤으므로 해당 프로세스를 `Ready queue`에 대기시켜주어야 하는 경우
-
-##### nonpreemptive
-
-`I/O interrupt` - CPU가 어떤 프로세스에게 할당되어 있다가 I/O 요청이 들어오면 그 프로세스에게 CPU를 넘겨주어야 하는 경우
-
-`Terminate` - 프로세스가 일을 모두 마치고 종료가 되면 CPU를 다른 프로세스에게 넘겨 주어야 하는 경우
-
-
-
-
-
-### 스케줄링의 성능 척도(Scheduling Criteria) - Performance Index(=Performance Measure)
-
-#### - 시스템 입장에서의 성능 척도 - CPU가 얼마나 일을 많이 하는가
-
-#### CPU utilization(이용률)
-
-전체 시간 중에서 CPU가 놀지 않고 일한 시간의 비율
-
-#### Throughput(처리량)
-
-주어진 시간동안 처리한 작업의 양
-
-
-
-#### - 프로그램(프로세스) 입장에서의 성능 척도 - 작업을 얼마나 빨리 처리하는가
-
-#### Turnaround time(소요 시간, 반환 시간)
-
-CPU를 받아서 모든 작업을 마치고 CPU를 다시 반환하기까지 걸린 시간. 프로세스가 시작되고 종료되는 시간이 아니라, **CPU를 할당받기 위해 `Ready queue` 에 들어온 시간과 프로세스가 종료된 시간의 차다.** `기다리는 시간 + CPU를 사용하는 시간`
-
-#### Waiting time(대기 시간)
-
-CPU를 할당받기 위해 `Ready queue`에서 대기한 시간의 총합
-
-#### Response time(응답 시간)
-
-`Ready queue`에 들어와서 처음 CPU를 얻기까지 걸린 시간
-
-
-
-이때 `Waiting time`은 `Response time`을 포함하는 개념이다. 
-
-##### 시간에 대한 내용을 왜 세분화했을까? 
-
-사용자의 입장에서 뭔가 하나라도 동작하는 것이 마음이 놓인다. 이러한 부분을 측정해 보여주는 시간이 바로 `Response time`인 것이다.
-
-
-
-### Scheduling Algorithms
 
 #### FCFS (First-Come First-Served)
 
@@ -167,7 +52,7 @@ FPFS는 프로세스의 순서에 따라 `waiting time`에 상당한 영향을 �
 
 
 
-![img](https://blog.kakaocdn.net/dn/JK9kv/btqGgwKXci9/V5kX65rauP4XsKZsBJ71s1/img.png)
+![img](https://blog.kakaocdn.net/dn/bVt6zf/btqGisIClz5/MbgCMa2f4QCbIJvpmZbgYK/img.png)
 
 
 
@@ -191,6 +76,8 @@ FPFS는 프로세스의 순서에 따라 `waiting time`에 상당한 영향을 �
 
 ####  
 
+####  
+
 #### Priority Scheduling
 
 **우선순위가 제일 높은 프로세스에게 CPU를 할당**하는 알고리즘이다. 정수로 우선순위를 표현하고, 작은 숫자가 우선순위가 높다는 기준을 가진다.
@@ -208,6 +95,8 @@ FPFS는 프로세스의 순서에 따라 `waiting time`에 상당한 영향을 �
 ![img](https://blog.kakaocdn.net/dn/buILCs/btqGgw5emBA/k3Z94IbR5dWyIzAKDV9OaK/img.png)
 
 
+
+####  
 
 ####  
 
@@ -239,12 +128,140 @@ FPFS는 프로세스의 순서에 따라 `waiting time`에 상당한 영향을 �
 
 #### Multilevel Queue
 
-아직
+`Ready queue`를 여러 개의 `class`로 분할한다. 각각의 `class`마다 다른 스케줄링 알고리즘 사용이 가능하다.
 
-####  
+e.g) 두 개의 `queue`
+
+```
+foreground (interactive한 job을 추가)` - `Round Robin
+background (batch - no human interaction)` - `FCFS
+```
+
+ 
+
+`interactive`한 프로세스들은 우선순위가 높고, 그렇지 않은 프로세스들은 우선순위를 낮게 지정한다.
+
+각 큐에 대한 스케줄링 또한 필요하다.
+
+- `Fixed priority scheduling`
+
+  `foreground`에 있는 모든 프로세스를 처리하고 `background`에 있는 프로세스에게 CPU를 할당하는 방법이다. 이 경우에는 `starvation` 문제가 발생할 수 있다.
+
+- `Time slice`
+
+  각 큐에 `CPU time`을 적절한 비율로 할당해서 `starvation` 문제를 해결할 수 있다.
+
+  e.g) `foreground`에 80%, `background`에 20% ..
+
+
+
+![img](https://blog.kakaocdn.net/dn/dghzRz/btqGewZzx8z/nalywXSj0UpLWQcZdvXtJ1/img.png)
+
+
 
 ####  
 
 #### Multilevel Feedback Queue
 
-안함
+`Multilevel Queue`에서 프로세스가 `queue`들간 이동이 가능한 알고리즘이다. `Aging`을 이와 같은 방식으로 구현할 수 있다. e.g) 오래된 프로세스를 하위 레벨의 큐로 옮김
+
+처음 들어오는 프로세스는 우선순위가 가장 높은 큐에 위치시켜 준다.
+
+우선순위가 높은 큐일수록 `Round Robin` 기법에서 `time quantum`을 짧게 준다.
+
+
+
+![img](https://blog.kakaocdn.net/dn/bDbPp7/btqGir30AzK/3kumASxqVhI7qr3jjV5rtk/img.png)
+
+
+
+e.g)
+
+1. 프로세스가 `Queue 0`에 들어옴
+2. `Q0`에 있는 프로세스가 `Q1`의 프로세스를 `preempt` 함
+3. `Q0`의 프로세스가 8ms만에 끝나지 않으면, `Q1`의 끝에 들어감
+4. `Q1`의 프로세스가 16ms만에 끝나지 않으면, `Q2`의 끝에 들어감
+
+###  
+
+###  
+
+### Multiple-Processor Scheduling
+
+##### 이때까지 보았던 스케줄링은 CPU가 한 개일 때의 스케줄링 기법이다.
+
+CPU가 여러 개인 경우, 스케줄링은 더욱 더 복잡해진다.
+
+- ```
+  Homogeneous processor
+  ```
+
+  인 경우
+
+  - `Queue`에 한 줄로 세워서 각 프로세서가 알아서 꺼내가게 할 수 있다.
+  - 반드시 특정 프로세서에서 수행되어야 하는 프로세스가 있는 경우에는 문제가 더 복잡해진다.
+
+- ```
+  Load sharing
+  ```
+
+  - 일부 프로세서에 `job`이 몰리지 않도록 부하를 적절히 공유하는 메커니즘이 필요하다.
+  - 별개의 `queue`를 두는 방법 vs. 공동 `queue`를 사용하는 방법
+
+- ```
+  Symmentric Multiprocessing (SMP)
+  ```
+
+  - 각 프로세서가 각자 알아서 스케줄링을 결정한다.
+
+- ```
+  Asymmetric multiprocessing
+  ```
+
+  - 하나의 프로세서가 시스템 데이터의 접근과 공유를 책임지고 나머지 프로세서는 거기에 따른다.
+
+####  
+
+#### Real-Time Scheduling
+
+`real time job`이란 데드라인이 있는 `job`이다. 즉, 정해진 시간 내에 반드시 처리해야 하는 `job`이다. 따라서 `CPU scheduling`을 할 때도 `real time job`은 데드라인을 보장해주어야 한다.
+
+- `Hard real-time systems`
+
+  `Hard real-time task`는 정해진 시간안에 반드시 끝내도록 스케줄링해야 한다.
+
+- `Soft real-time computing`
+
+  `Soft real-time task`는 일반 프로세스에 비해 높은 `priority`를 갖도록 해야 한다.
+
+####  
+
+#### Tread Scheduling
+
+- `Local Scheduling`
+
+  `User level thread`의 경우 사용자 수준의 `thread library`에 의해 어떤 `thread`를 스케줄할지 결정한다.
+
+- `Global Scheduling`
+
+  `Kernel level thread`의 경우 일반 프로세스와 마찬가지로 커널의 단기 스케줄러가 어떤 `thread`를 스케줄할지 결정한다.
+
+###  
+
+### Algorithm Evalution
+
+어떤 스케줄링 알고리즘이 좋은지 평가하는 기준
+
+1. `Queueing models`
+
+   이론적인 방법이다. 확률 분포로 주어지는 `arrival rate`와 `service rate`등을 통해 각종 `performance index` 값을 계산한다.
+
+2. `Implementation (구현) & Measurement (성능 측정)`
+
+   실제 시스템에 알고리즘을 구현하여 실제 작업`(workload)`에 대해서 성능을 측정/비교한다.
+
+3. `Simulation (모의 실험)`
+
+   알고리즘을 모의 프로그램으로 작성 후 `trace`를 입력으로 하여 결과를 비교한다.
+
+   `trace`: 시뮬레이션 프로그램에 들어갈 입력 데이터를 의미한다.
