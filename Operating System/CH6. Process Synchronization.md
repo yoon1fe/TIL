@@ -303,3 +303,141 @@ do{
 - `critical section`의 길이가 긴 경우 `Block/wakeup`이 적당하다.
 - `critical section`의 길이가 매우 짧은 경우 `Block/wakeup`의 오버헤드가 `busy-wait` 오버헤드보다 더 커질 수 있다.
 - 일반적으로는 `Block/wakeup` 방식이 더 좋다.
+
+#### Deadlock and Starvation on Semaphore
+
+Deadlock - 둘 이상의 프로세스가 서로 상대방에 의해 충족될 수 있는 event를 무한히 기다리는 현상
+
+자신이 잡은 자원을 내놓지 않고 서로 상대방의 자원을 기다리는 현상이다. 이는 세마포어 로직 자체의 문제는 아니다.
+
+Starvation(Indefinite blocking) - 프로세스가 suspend된 이유에 해당하는 세마포어 큐에서 빠져나갈 수 없는 현상.
+
+
+
+
+
+## Classical Problems of Synchronization
+
+### Bounded-Buffer(유한한 버퍼) Problem
+
+(=Producer-Consumer Problem)
+
+버퍼의 크기가 유한한 환경에서 발생한다.
+
+이 문제에는 Producer 프로세스들과 Consumer 프로세스들이 존재한다.
+
+#### Producer
+
+1. Empty 버퍼가 있는지? - 없으면 기다린다.
+2. 공유 데이터에 lock을 건다.
+3. Empty buffer에 데이터 입력 및 buffer를 조작한다.
+4. Lock을 푼다.
+5. Full buffer 하나를 증가시킨다.
+
+#### Consumer
+
+1. Full 버퍼가 있는지? - 없으면 기다린다.
+2. 공유 데이터에 lock을 건다.
+3. Full buffer에서 데이터를 꺼내고 buffer를 조작한다.
+4. Lock을 푼다.
+5. Empty buffer 하나를 증가시킨다.
+
+#### Shared Data
+
+- 버퍼 자체 및 버퍼 조작 변수(Empty/Full buffer의 시작 위치)
+
+#### Synchronization variables
+
+- binary semaphore - 공유 데이터의 mutual exclusion을 위한 세마포어
+- integer semaphore - 남은 full/empty buffer의 수를 표시하기 위한 세마포어
+
+
+
+![img](https://blog.kakaocdn.net/dn/erfzO8/btqGxPemMas/a8F25hBZUWjrLvKjFPkxXK/img.png)
+
+
+
+###  
+
+### Readers-Writers Problem
+
+동시에 여러 프로세스가 데이터를 read할 수는 있지만, 한 프로세스가 DB에 write 중일 때 다른 프로세스가 접근하면 안 된다.
+
+#### Soultion
+
+- writer가 DB에 접근 허가를 아직 얻지 못한 상태에서는 모든 대기중인 Reader들을 다 DB에 접근하게 해준다.
+- Writer는 대기 중인 Reader가 하나도 없을 때 DB 접근이 허용된다.
+- 일단 Writer가 DB에 접근 중이면 Reader들은 접근이 금지된다.
+- Writer가 DB에서 빠져나가야만 Reader의 접근이 허용된다.
+
+#### Shared Data
+
+- DB 자체
+- readcount - 현재 DB에 접근 중인 Reader의 수
+
+#### Synchronization variables
+
+- mutex - 공유 변수 readcount를 접근하는 코드(critical section)의 mutual exclusion을 보장하기 위한 변수
+- db - Reader와 Writer가 공유 DB 자체를 올바르게 접근하게 하는 변수
+
+
+
+![img](https://blog.kakaocdn.net/dn/dSkak0/btqGAVxRezc/ELpz2r5b7IShAZjwc2jp51/img.png)
+
+
+
+> Reader 우선
+
+semaphore db = reader-writer 간의 synchronization
+
+semaphore mutex = reader끼리의 synchronization
+
+int read_count = reader가 몇 명인지 체크
+
+이 경우에는 Starvation이 있을 수 있다.
+
+###  
+
+### Dining-Philosophers Problem
+
+철학자 다섯 명이 원탁에 앉아 있다. 철학자는 1) 생각하거나 2) 밥을 먹거나 두 경우의 일을 한다. 밥을 먹으려 하면 양쪽에 있는 젓가락을 잡고 밥을 먹는다.
+
+#### Synchronization variables
+
+- semaphore chopstick[5]; // 모두 1로 초기화. 혼자서만 잡을 수 있다.
+
+
+
+![img](https://blog.kakaocdn.net/dn/beksdq/btqGCJDGWkm/01WIoPsGiuw1Gd38iEQA1k/img.png)
+
+
+
+이러한 경우에 철학자가 밥을 다 먹기 전까지는 한 번 잡은 젓가락을 절대 놓지 않기 때문에 **Deadlock**이 발생할 수 있다.
+
+e.g) 모든 철학자가 동시에 왼쪽 젓가락을 집은 경우
+
+#### Solution
+
+1. 4명의 철학자만이 테이블에 동시에 앉을 수 있도록 한다.
+2. 젓가락을 두 개 모두 집을 수 있는 경우에만 젓가락을 집을 수 있도록 한다.
+3. 비대칭
+   - 짝수(홀수) 철학자는 왼쪽(오른쪽) 젓가락부터 집도록 한다.
+
+ 
+
+## Monitor
+
+### 세마포어의 문제점
+
+- 코딩하기 힘들다.
+- 정확성(correctness)의 입증이 어렵다.
+- 자발적 협력(voluntary cooperation)이 필요하다.
+- 한 번의 실수가 모든 시스템에 치명적인 영향을 끼친다.
+
+### Monitor
+
+동시 수행중인 프로세스 사이에서 abstract data type의 안전한 공유를 보장하기 위한 프로그래밍 언어 차원에서 Synchronization 문제를 해결하는 **High level Synchronization Contruct** 이다.
+
+공유 데이터와 공유 데이터에 접근할 수 있는 프로시저를 하나의 모니터에 함께 묶어두는 방법이다.
+
+모니터 자체가 동시 접근을 허용하지 않도록 만들어져 있기 때문에 프로그래머가 동기화를 고려하지 않아도 된다.
