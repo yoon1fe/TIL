@@ -174,8 +174,8 @@ e.g) printf() 함수의 라이브러리 코드
 
 메모리는 일반적으로 두 영역으로 나뉘어 사용된다.
 
-- OS 상주 영역 - interrupt vector와 함께 낮은 주소의 영역을 사용한다.
-- 사용자 프로세스 영역 - 높은 주소의 영역을 사용한다.
+- **OS 상주 영역** - interrupt vector와 함께 낮은 주소의 영역을 사용한다.
+- **사용자 프로세스 영역** - 높은 주소의 영역을 사용한다.
 
 
 
@@ -309,4 +309,152 @@ Best-fit과 마찬가지로 모든 리스트를 탐색해야 한다.
 
 
 ## Noncontiguous Allocation
+
+하나의 프로세스가 메모리의 여러 영역에 분산된어 올라갈 수 있도록 하는 방법이다.
+
+
+
+### Paging
+
+프로그램의 virtual memory를 **일정한 크기로 잘라서(page)** 이 페이지 단위로 physical memory에 올리거나 backing store에 내리는 기법이다. 
+
+이 때, Physical memory도 페이지 단위만큼 잘라놓는다. 이를 페이지 프레임(frame)이라고 한다.
+
+페이지 프레임이 있으면 hole이 생기지 않는다. **대신,**  주소 변환을 페이지 별로 해야 하기 때문에 Address binding이 복잡해진다.
+
+주소 변환은 page table을 사용하여 logical address를 physical address으로 변환한다.
+
+External fragmentation은 발생하지 않는다.
+
+Internal fragmentation은 발생할 수 있다. (page frame의 크기 > 마지막 page의 크기)
+
+
+
+### Segmentation
+
+프로그램의 주소 공간(virtual memory)을 의미있는 단위로 자르는 기법이다.
+
+크게 code, data, stack segment로 자른다.  세그먼트는 의미 단위이기 때문에 이보다 더 잘게 자를 수도 있다. 예를 들어 함수 별로 세그먼트로 자를 수도 있다.
+
+크기가 균일하지 않기 때문에 연속 할당방식에서 발생했던 문제점(Dynamic Storage-Allocation Problem)이 동일하게 발생할 수 있다.
+
+
+
+
+
+
+
+## Paging
+
+Process의 virtual memory를 동일한 크기의 page단위로 나눈다.
+
+Virtual memory의 내용은 page 단위로 불연속적으로 저장된다.
+
+일부는 backing storage에, 일부는 physical memory에 저장될 수 있다.
+
+
+
+Physical memory를 동일한 크기의 frame으로 나누고, logical memory를 (frame과 )동일한 크기의 page로 나눈다. 
+
+주소 변환은 page table을 사용하여 logical address를 physical address으로 변환한다.
+
+External fragmentation은 발생하지 않는다.
+
+Internal fragmentation은 발생할 수 있다. (page frame의 크기 > 마지막 page의 크기)
+
+
+
+### Paging 예
+
+![image-20200820224559873](C:\Users\1Fe\AppData\Roaming\Typora\typora-user-images\image-20200820224559873.png)
+
+주소 변환을 위해 page table을 활용한다.
+
+logical address가 테이블의 인덱스(entry)를 가리키고,
+
+테이블의 value 값으로 physical address의 frame number 를 갖는다.
+
+
+
+### Address Translation Architecture
+
+![image-20200820224901680](C:\Users\1Fe\AppData\Roaming\Typora\typora-user-images\image-20200820224901680.png)
+
+
+
+CPU가 다루는 logical address는
+
+- **page number(p)**와
+- **page offset(d)**로 나뉜다.
+
+page 번호를 통해 page table에서 frame number를 가져오고,
+
+offset을 통해 해당하는 frame에서 얼만큼 떨어져있는지, 즉 내부에서 위치가 어딘지를 알 수 있다.
+
+
+
+**그럼 page table은 어디에 위치하고 있을까?**
+
+기초적인 MMU는 레지스터 두 개를 이용해서 주소를 변환했다.
+
+프로그램 하나당 매우 많은 수의 페이지로 나뉠 수 있고, 그렇게 되면 table의 크기도 매우 커질 것이다. 또한, 프로그램마다 각각 별개의 page table을 갖고 있어야 한다. CPU 내부에 레지스터를 두어 page table 정보를 저장하는 것은 현실적으로 불가능하다.
+
+따라서 page table은 **Main Memory**에 상주한다.
+
+기존의 두 개의 레지스터(base, limit)는 다음과 같은 역할을 하게 된다.
+
+- Page-Table Base Register(PTBR) - page table의 시작 위치를 가리킨다.
+- Page-Table length Register(PTLR) - 테이블의 크기를 보관한다.
+
+메모리에 접근하려면 page table에 접근해야 하고, 이 page table 또한 메모리에 있기 때문에 **결국 모든 메모리 접근 연산에는 2번의 memory access가 필요**하다.
+
+속도 향상을 위해 별도의 하드웨어를 사용한다.
+
+**Translation Look-aside Buffer(TLB)(= associative register)** 라는 일종의 캐시를 사용한다.
+
+메인 메모리와 CPU 사이에 존재한다.
+
+#### Paging Hardware with TLB
+
+![image-20200820230523972](C:\Users\1Fe\AppData\Roaming\Typora\typora-user-images\image-20200820230523972.png)
+
+TLB는 주소 변환을 위한 캐시 메모리인 셈이다.
+
+page table에서 빈번히 참조되는 일부 엔트리를 캐싱하고 있다.
+
+그래서 page table에 접근하기 전에 TLB에 저장이 되어 있는지 먼저 확인하게 된다.
+
+단, page table의 모든 내용을 담고 있지 않기 때문에 TLB에는 page number와 frame number를 가져야 한다.
+
+또한 TLB에서 해당하는 page table의 엔트리를 찾으려면 O(n) 타임이 걸리게 된다. 따라서 parallel search가 가능한 Associative register를 활용해 탐색한다.
+
+page table과 마찬가지로 TLB도 프로세스마다 다른 정보가 들어 있어야 하기 때문에, context switch 때 flush가 된다.
+
+
+
+### Two-Level Page Table
+
+> **참고**
+>
+> 32bit 주소 체계의 컴퓨터에서 인식할 수 있는 주소 공간은 2^32(4GB)만큼이다. 따라서 RAM이 4GB보다 큰 경우는 인식하지 못하는 것!
+
+현대의 컴퓨터는 address space 체계가 매우 크다.
+
+32bit 주소 체계에서 인식할 수 있는 주소 공간은 4GB이다. 페이지의 크기를 4KB로 나누었다면 약 100만개의 페이지가 생기게 되고, 이를 위한 1M 개의 page table entry가 필요할 것이다. 그리고, 각 page entry는 보통 4byte인데, 그러면 프로세스당 4M 개의 page table의 필요하게 된다.
+
+하지만, 대부분의 프로그램은 4GB의 주소 공간 중 지극히 일부분만 사용하므로 page table 공간이 심하게 낭비된다.
+
+
+
+따라서 page table 자체를 또 하나의 page로 보는 방식을 사용했다.
+
+**계속~~~~~~~~~~~**
+
+
+
+![image-20200820231919687](C:\Users\1Fe\AppData\Roaming\Typora\typora-user-images\image-20200820231919687.png)
+
+
+
+
 
