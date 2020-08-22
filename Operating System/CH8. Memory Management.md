@@ -366,7 +366,7 @@ Internal fragmentation은 발생할 수 있다. (page frame의 크기 > 마지�
 
 ### Paging 예
 
-![image-20200820224559873](C:\Users\1Fe\AppData\Roaming\Typora\typora-user-images\image-20200820224559873.png)
+![image-20200822170453331](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2F5Myrx%2FbtqG9AS8YBf%2FP75YWe2HM1aSW99SnYgXk1%2Fimg.png)
 
 주소 변환을 위해 page table을 활용한다.
 
@@ -378,7 +378,7 @@ logical address가 테이블의 인덱스(entry)를 가리키고,
 
 ### Address Translation Architecture
 
-![image-20200820224901680](C:\Users\1Fe\AppData\Roaming\Typora\typora-user-images\image-20200820224901680.png)
+![image-20200822170633905](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2FsKgjc%2FbtqG62bK9g4%2Fc4aOzFDoxFAHacTB5tbj91%2Fimg.png)
 
 
 
@@ -390,6 +390,16 @@ CPU가 다루는 logical address는
 page 번호를 통해 page table에서 frame number를 가져오고,
 
 offset을 통해 해당하는 frame에서 얼만큼 떨어져있는지, 즉 내부에서 위치가 어딘지를 알 수 있다.
+
+------
+
+보통 p = 20, d = 12 이다.
+
+밑에 다시 한 번 언급하겠지만, 정리하는 겸 써본당.
+
+32bit 주소 체계 기준 보통 페이지의 크기를 **4KB**로 나눈다. 즉, 한 페이지 내부에서 위치를 찾으려면 2^12만큼의 정보를 갖고 있어야 하기 때문에 **12bit**가 필요한 것이다.
+
+마찬가지로 32bit 주소 체계에서의 페이지 테이블의 엔트리 하나의 크기는 32bit, 즉 4B이다. 총 4GB만큼의 정보를 갖고 있어야 하기 때문이다. 그리고 페이지 테이블 하나의 엔트리의 개수는 4GB(메모리의 크기)/4KB(페이지의 크기) = 1M개가 된다. 1M = 2^20이므로, p는 20이 필요하다.
 
 
 
@@ -416,7 +426,7 @@ offset을 통해 해당하는 frame에서 얼만큼 떨어져있는지, 즉 내�
 
 #### Paging Hardware with TLB
 
-![image-20200820230523972](C:\Users\1Fe\AppData\Roaming\Typora\typora-user-images\image-20200820230523972.png)
+![image-20200822170650104](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2FbOidyj%2FbtqG3EQFbK7%2F8DYdvGmSNKHQjXhC77QZKk%2Fimg.png)
 
 TLB는 주소 변환을 위한 캐시 메모리인 셈이다.
 
@@ -437,10 +447,12 @@ page table과 마찬가지로 TLB도 프로세스마다 다른 정보가 들어 
 > **참고**
 >
 > 32bit 주소 체계의 컴퓨터에서 인식할 수 있는 주소 공간은 2^32(4GB)만큼이다. 따라서 RAM이 4GB보다 큰 경우는 인식하지 못하는 것!
+>
+> **이 말을 반대로 말하면 2^n 각각을 구분하기 위해서는 n bit가 필요하다는 말도 된다!**
 
 현대의 컴퓨터는 address space 체계가 매우 크다.
 
-32bit 주소 체계에서 인식할 수 있는 주소 공간은 4GB이다. 페이지의 크기를 4KB로 나누었다면 약 100만개의 페이지가 생기게 되고, 이를 위한 1M 개의 page table entry가 필요할 것이다. 그리고, 각 page entry는 보통 4byte인데, 그러면 프로세스당 4M 개의 page table의 필요하게 된다.
+32bit 주소 체계에서 인식할 수 있는 주소 공간은 4GB이다. 페이지의 크기를 4KB로 나누었다면 약 100만개의 페이지가 생기게 되고, 이를 위한 1M 개의 page table entry가 필요할 것이다. 그리고, 각 page entry는 4byte인데**(32bit 주소 체계니깐)**, 그러면 프로세스당 4MB의 page table의 필요하게 된다.
 
 하지만, 대부분의 프로그램은 4GB의 주소 공간 중 지극히 일부분만 사용하므로 page table 공간이 심하게 낭비된다.
 
@@ -448,13 +460,157 @@ page table과 마찬가지로 TLB도 프로세스마다 다른 정보가 들어 
 
 따라서 page table 자체를 또 하나의 page로 보는 방식을 사용했다.
 
-**계속~~~~~~~~~~~**
+![image-20200822170717357](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2FSTo02%2FbtqG6Cj3dQI%2F2iRfPDKf4LUDIPL2ZBFVU1%2Fimg.png)
 
 
 
-![image-20200820231919687](C:\Users\1Fe\AppData\Roaming\Typora\typora-user-images\image-20200820231919687.png)
+Two-Level Paging 기법에서는 inner page table과 outer page table 두 가지의 테이블이 존재한다.
+
+
+
+#### Two-Level Paging의 예
+
+logical address (page size가 4K인 32bit 체계에서)의 구성은
+
+- 20bit의 **page number** 와,
+
+- 12bit의 **page offset** 으로 이루어져 있다.
+
+  **Why?** 페이지의 크기는 4KB(4byte x 1K)이다. 즉, 2의 12제곱 바이트. 
+
+  **메모리는 바이트 단위로 주소가 매겨지기 때문에**, 페이지 안에 어디에 위치해있나**(몇 번째 떨어져있는 바이트인지)**를 확인하기 위해서 총 12bit가 필요한 것!
+
+Two-Level Paging 기법에서는 page table 자체가 page로 구성되기 때문에, page number는 다음과 같이 나뉜다.
+
+(각 **page table entry가 4B**이므로, entry는 총 1024(1K)개가 존재한다. 이를 구분하기 위해 10bit가 필요)
+
+- 10bit의 **page number**
+- 10bit의 **page offset**
+
+
+
+따라서, logical address는 다음과 같다.
+
+![image-20200822171255902](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2FIKq8A%2FbtqG6fh5Wnf%2FPXNAInTq6GZbKu0sKCUQd1%2Fimg.png)
+
+
+
+#### 2단계 페이징에서의 주소 변환 scheme
+
+![image-20200822171348132](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2Fb2rfjj%2FbtqG68CQWgg%2F24VpK2lXLHg3yelR9gzYfk%2Fimg.png)
 
 
 
 
+
+그런데, 2단계 페이징 기법은 여전히 안쪽 페이지 테이블의 엔트리는 100만개가 필요하다.
+
+오히려 바깥쪽 페이지 테이블이 하나 더 필요하기 때문에 1단계 페이징 기법보다 공간적으로나 시간적으로나 손해다.
+
+-> 사용되지 않는 주소 공간에 대한 outer page table의 엔트리 값은 **NULL 값**을 갖는다.
+
+
+
+
+
+### Multilevel Paging and Performance
+
+주소 공간이 더 커게 되면 다단계 페이지 테이블이 필요해진다.
+
+각 단계의 페이지 테이블들은 메모리에 존재하기 때문에, logical address의 physical address 변환에 더 많은 메모리 액세스가 필요하다.
+
+-> 이를 TLB를 통해 메모리 접근 시간을 줄일 수 있다.
+
+
+
+#### 4단계 페이지 테이블을 사용하는 경우
+
+> Q. 메모리 접근 시간이 100ns, TLB 접근 시간이 20ns이고, 
+>
+> TLB hit ratio가 98%라면 effective memory access time은 얼마일까?
+
+0.98 * (100 + 20) * 0.02 * (100 * 4 + 100 + 20) = 128ns. 결과적으로 주소 변환을 위해서는 28ns 만 소요된다.
+
+
+
+
+
+### Page Protection
+
+페이지 테이블에는 사실 frame number를 저장하는 비트말고 여러 비트가 있다. 
+
+- frame number
+- valid-invalid bit
+- protection bit
+
+![image-20200822183000441](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2FchPkRU%2FbtqG2HfHeUA%2FkzfOCMaTaPbE9kuVYHef9k%2Fimg.png)
+
+페이지 테이블은 인덱스를 통해 접근해야 하기 때문에 사용되지 않는 영역에 대해서도 엔트리가 생성되어야 한다.
+
+위의 그림을 보면 6, 7번 엔트리는 사용하지 않기 때문에 frame number에 0이 들어가 있다. 하지만 이게 0번째 프레임을 가리키는건지 의미없는 값인지를 확인해주기 위해서 사용하지 않는 엔트리에는 invalid로 표시한다.
+
+즉, valid로 표시되어 있단 것은 그 페이지가 **메모리에 올라와 있다**는 의미이다.
+
+invalid로 표시되어 있으면 해당 주소의 **프레임에 유효한 내용이 없음**을 뜻한다.
+
+* 프로세스가 그 주소 부분을 사용하지 않는 경우
+* 해당 페이지가 메모리에 올라와 있지 않고 swap area에 있는 경우
+
+
+
+**Protection bit** 는 페이지에 대한 접근(연산) 권한을 가진다. (read / write / read-only)
+
+프로세스마다 각각의 페이지 테이블을 갖고 있기 때문에 프로세스간의 Protection을 의미하는 것이 아니다.
+
+code 영역의 경우 사용자로부터 수정을 막기 위해 read-only 권한을 부여하고,
+
+data 영역이나 stack 영역은 수정할 수 있기 때문에 read / write 권한을 부여하는 식이다.
+
+
+
+**PTLR (Page Table Length Register)** - 페이지 테이블의 사이즈를 저장하는 레지스터이다. 페이지 테이블의 크기를 각각의 프로세스가 쓰는 만큼 줄여서 다른 프로세스의 페이지에 접근하는 것을 방지한다.
+
+
+
+### Inverted Page Table
+
+페이지 테이블은 공간에 대한 오버헤드가 매우 크다.
+
+모든 프로세스 별로 logical address에 대응되는 모든 페이지에 대해 page table entry가 존재하고,
+
+대응하는 페이지가 메모리에 있든 없든 페이지 테이블에는 엔트리로써 존재하기 때문이다.
+
+
+
+기존의 페이지를 통한 주소 변환을 반대로 생각한 개념이 바로 Inverted page table 이다.
+
+물리적 메모리의 frame 개수만큼을 담은 페이지 테이블을 갖는다. 따라서 **실제 메모리 크기만큼의 페이지 테이블만 있으면 된다.**
+
+logical address에 어느 프로세스가 사용하는 것인지 명시해주기 위해 pid 정보를 갖고 있어야 한다.
+
+![image-20200822184438580](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2Fbp7L7q%2FbtqG6gH6Qa6%2FhOWkpDQwA6wRR92skml3k0%2Fimg.png)
+
+기존의 페이징 기법에서는 페이지 번호를 갖고 프레임 번호를 찾았는데, 
+
+Inverted page table 기법은 프레임 번호를 갖고 몇 번째 페이지에 있는지를 찾는다.
+
+
+
+이 방식은 공간적인 오버헤드를 줄일 수 있는 대신, 시간적 오버헤드가 있다. 페이지 테이블 전체를 탐색해야 하기 때문이다. TLB 방식처럼 associative register를 사용해서 탐색해볼 수도 있겠다. 하지만 너무 비싸다.
+
+
+
+
+
+### Shared Page
+
+여러 개의 프로그램들이 똑같은 코드를 쓸 때, 코드가 들어있는 페이지의 중복을 없애보자.
+
+동일한 내용이 들어있는 페이지(Shared code, Re-entrant code)를 모두 메모리에 올리는 것이 아니라 하나만 올리는 방식이다.
+
+이러한 Shared-code가 있는 페이지는 반드시 read-only로 설정한다.
+
+Shared-code는 모든 프로세스의 logical address space 에서 동일한 위치에 있어야 한다.
+
+![image-20200822185424510](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2FbhVoDg%2FbtqG4bUVPmk%2FQubHd6luHBiImH9k2kBnfK%2Fimg.png)
 
