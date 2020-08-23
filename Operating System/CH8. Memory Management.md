@@ -614,3 +614,75 @@ Shared-code는 모든 프로세스의 logical address space 에서 동일한 위
 
 ![image-20200822185424510](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2FbhVoDg%2FbtqG4bUVPmk%2FQubHd6luHBiImH9k2kBnfK%2Fimg.png)
 
+
+
+
+
+
+
+## Segmentation
+
+프로그램에 있는 여러 의미 단위를 각각 세그먼트로 구성한다.
+
+크게는 프로그램 전체를 하나의 세그먼트로 정의할 수도 있고, 작게는 프로그램을 구성하는 함수 하나 하나를 세그먼트로 정의할 수도 있다.
+
+일반적으로는 code, data, stack 부분이 하나씩의 세그먼트로 정의된다.
+
+
+
+### Segmentation Architecture
+
+세그멘테이션에서의 주소 변환은 페이징 기법과 비슷한 면이 있다.
+
+Logical address는 **<segment-number,  offset>** 으로 구성된다. 여기서 offset은 세그먼트 안에서의 위치를 나타낸다. 세그먼트 별로 서로 다른 physical memory 위치에 올라가 있기 때문에 세그먼트 별로 주소 변환을 해야 하므로 **Segment table**을 두고 있다.
+
+주소 변환에 사용되는 기존의 **두 레지스터(base, limit)**는 다음과 같이 사용된다.
+
+- Segment-table base register(STBR) - physical memory에서의 세그먼트 테이블의 위치
+
+- Segment-table length register(STLR) - 프로그램이 사용하는 세그먼트의 수
+
+
+
+### Segmentation Hardware
+
+![image-20200823213315418](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2Fb42uLw%2FbtqG6e4362y%2FcOU6ISMFolsnmISQinl7fK%2Fimg.png)
+
+
+
+trap: 원래 할당된 세그먼트의 범위를 벗어나서 액세스하는 경우이다. Segmentation fault ?
+
+
+
+#### 단점 - Allocation
+
+세그멘테이션 기법은 **External fragmentation**이 발생한다. 세그먼트의 길이가 모두 동일하지 않기 때문에 가변 분할 방식에서의 동일한 문제점들이 발생하는 것이다. 따라서 first bit / best fit 과 같은 방법을 사용한다.
+
+
+
+#### 장점
+
+세그먼트는 의미 단위로 쪼개기 때문에 **공유**와 **보안**에 있어서 페이징 기법보다 훨씬 효과적이다.
+
+- Protection 
+  - 각 세그먼트 별로 protection bit가 존재해서 의미 단위 별로 read/write와 같은 권한을 줄 수 있다.
+- Sharing
+  - 마찬가지로 의미 단위인 세그먼트를 공유하는 것이 훨씬 효과적이다.
+
+
+
+### Example of Segmentation
+
+![image-20200823214519973](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2FFK2Xf%2FbtqG50zpqBQ%2FwKazJrYB9gPd2mnqeiIPI0%2Fimg.png)
+
+
+
+
+
+### Paged Segmentation (Segmentation with Paging)
+
+세그먼트 한 개가 여러 개의 페이지로 구성된다.
+
+기존의 세그멘테이션 기법(pure segmentation)과 다르게, segment-table entry가 세그먼트의 base address를 갖고 있는 것이 아니라 세그먼트를 구성하는 page table의 base address를 갖고 있다.
+
+즉, **선 세그멘테이션 후 페이징** 이다.
