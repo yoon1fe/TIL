@@ -39,8 +39,23 @@
 
 
 
-
-
 ### :family_man_boy: Spring
 
 > 구멍가게 코딩단의 `코드로 배우는 스프링 웹 프로젝트(개정판)`을 바탕으로 공부중 
+
+
+
+### :family_man_boy: Web
+
+> Front-End 
+>
+> - HTML
+> - CSS
+> - JavaScript
+> - jQuery
+>
+> Back-End
+>
+> - Servlet
+> - JSP
+> - Spring
