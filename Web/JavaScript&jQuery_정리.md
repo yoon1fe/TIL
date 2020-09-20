@@ -452,7 +452,7 @@
 
 
 
-## 7) classs 속성
+## 7) class 속성
 
 ### Vanilla JS
 
