@@ -107,9 +107,17 @@ Java Virtual Machine (JVM)이란 **자바 바이트 코드를 실행할 수 있�
 
       Young Generation 영역에서 저장되었던 객체 중 오래된 객체가 이동되어 저장되는 영역이다. 이 영역에서 객체가 사라질 때 Major GC(Full GC)가 발생한다.
 
-   3. **Permanent Generation**
+   
 
-      생성된 객체들의 정보의 주소값이 저장된 공간이다. Class loader에 의해 load되는 class, Method 등에 대한 메타 정보가 저장되는 영역이고 JVM에 의해 사용된다. 
+   - **Permanent Generation** (Perm)
+
+   생성된 객체들의 정보의 주소값이 저장된 공간이다. Class loader에 의해 load되는 class, Method 등에 대한 메타 정보가 저장되는 영역이고 JVM에 의해 사용된다. 
+
+   Oracle JVM에서는 이 부분은 Heap 부분이 아닌, Method area에 속한다고 한다. 
+
+   그리고 Java 8부터 이 Permanent Generation 부분이 제거되고, 대신 **Metaspace** 영역이 추가되었다. 기존의 Perm은 JVM에 의해 크기가 강제되던 영역이다. 반면에 Metaspace는 Native memory 영역으로, OS가 자동으로 크기를 조절한다. **임의로 크기를 조절할 수도 있다**. 그 결과, **기존과 비교해 큰 메모리 영역을 사용할 수 있게 되었다**. - Perm 영역 크기로 인한 `java.lang.OutOfMemoryError`를 보기 힘들어졌다.
+
+   
 
 
 
@@ -121,6 +129,10 @@ Java Virtual Machine (JVM)이란 **자바 바이트 코드를 실행할 수 있�
 
 ##### Reference
 
+https://www.oracle.com/webfolder/technetwork/tutorials/obe/java/gc01/index.html
+
 https://hoonmaro.tistory.com/19
 
 https://asfirstalways.tistory.com/159
+
+https://stackoverflow.com/questions/2129044/java-heap-terminology-young-old-and-permanent-generations%20
