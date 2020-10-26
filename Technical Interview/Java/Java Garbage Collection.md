@@ -82,7 +82,7 @@ Minor GC는 JVM이 새 객체에 대한 공간을 할당할 수 없을 때 발�
 
 #### [Old 영역에 대한 GC]
 
-Old 영역은 기본적으로 데이터가 가득 차면 GC를 실행한다. GC 방식에 따라서 처리 절차가 달라지기 때문에, Java 7 기준 다섯 가지 방법을 살펴보자..
+Old 영역은 기본적으로 데이터가 가득 차면 GC를 실행한다. GC 방식에 따라서 처리 절차가 달라지기 때문에, Java 7 기준 다섯 가지 방법이 있다.
 
 - Serial GC
 - Parallel GC
@@ -91,8 +91,6 @@ Old 영역은 기본적으로 데이터가 가득 차면 GC를 실행한다. GC 
 - G1(Garbage First) GC
 
 
-
-내일 계속....... ㅜㅜ
 
 
 
@@ -113,3 +111,7 @@ https://d2.naver.com/helloworld/1329
 https://plumbr.io/blog/garbage-collection/minor-gc-vs-major-gc-vs-full-gc
 
 https://gyoogle.dev/blog/computer-language/Java/Garbage%20Collection.html
+
+https://medium.com/@joongwon/jvm-garbage-collection-algorithms-3869b7b0aa6f
+
+https://mirinae312.github.io/develop/2018/06/04/jvm_gc.html
