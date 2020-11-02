@@ -82,15 +82,96 @@ Minor GC는 JVM이 새 객체에 대한 공간을 할당할 수 없을 때 발�
 
 #### [Old 영역에 대한 GC]
 
-Old 영역은 기본적으로 데이터가 가득 차면 GC를 실행한다. GC 방식에 따라서 처리 절차가 달라지기 때문에, Java 7 기준 다섯 가지 방법이 있다.
+Old 영역은 기본적으로 데이터가 가득 차면 GC를 실행한다. Java 7 기준 다섯 가지 방법이 있...지만 자바 15 기준으로 몇개만 한 번 살펴보자.
 
 - Serial GC
 - Parallel GC
-- Parallel Old GC (Parallel Compacting GC)
-- Concurrent Mark & Sweep GC (CMS)
+- ~~Parallel Old GC (Parallel Compacting GC)~~
+- ~~Concurrent Mark & Sweep GC (CMS)~~ -> 이 방식은 오라클 공식 문서를 찾아보니 Java 15에는 빠져있다.
 - G1(Garbage First) GC
+- (The Z GC)
 
 
+
+**Serial GC** (-XX:+UseSerialGC)
+
+Young 영역에서의 GC는 앞에서 설명한 방식을 사용한다. Old 영역의 GC는 mark-sweep-compact라는 알고리즘을 사용한다. 이 알고리즘의 첫 단계는 Old 영역에 살아있는 객체를 식별**(Mark)**하는 것이다. 그 다음에는 힙 영역의 앞부분부터 확인하여 살아있는 것만 남긴다**(Sweep)**. 마지막 단계에서는 각 객체들이 연속되게 쌓이도록 힙의 가장 앞 부분부터 채워서 객체가 존재하는 부분과 객체가 없는 부분으로 나눈다**(Compaction)**.
+
+Serial GC는 적은 메모리와 CPU 코어 개수가 적을 때 적합한 방식이다.
+
+
+
+**Parallel GC** (-XX:+UseParallelGC)
+
+Parallel GC는 Serial GC와 기본적인 알고리즘은 같다. 그러나 Serial GC는 GC를 처리하는 쓰레드가 하나인 것에 비해, Parallel GC는 GC를 처리하는 쓰레드가 여러 개이다. 그렇기 때문에 Serial GC보다 빠르게 객체를 처리할 수 있다. Parallel GC는 메모리가 충분하고 코어의 개수가 많을 때 유리하다. 이 GC는 Throughput GC라고도 부른다.
+
+
+
+![JavaGarbage4](https://d2.naver.com/content/images/2015/06/helloworld-1329-4.png)
+
+
+
+**G1 GC** (-XX:+UseG1GC)
+
+eclipse.ini 를 살펴 보니 현재 디폴트로 되어 있도라...
+
+G1 GC는 지금까지 열심히 이해했던 Young Generation 과 Old Generation을 깔끔히 잊어버리자.
+
+G1 GC는 바둑판 모양의 각 영역에 객체를 할당하고 GC를 실행한다. 그러다가 해당 영역이 꽉 차면 다른 영역에서 객체를 할당하고 GC를 실행한다. 즉, 지금까지 Young 영역들에서 Old 영역으로 뭐시기 하는 단계가 사라진 GC 방식이다.
+
+
+
+![G1Heap](https://mirinae312.github.io/img/jvm_gc/G1Heap.png)
+
+
+
+하드웨어가 발전하면서 Java 애플리케이션에서 사용할 수 있는 메모리의 크기도 점차 커져갔다. 하지만 기존의 GC 알고리즘들로는 큰 메모리에서 좋은 성능(짧은 stop-the-world)을 내기 힘들었기 때문에 이에 초점을 둔 G1 GC가 등장했다. 따라서 G1 GC의 가장 큰 장점은 좋은 성능이다. G1 GC에서의 힙 영역은 Region이라는 특정한 크기로 나눠서 각 Region의 상태에 따라 역할(Eden, Survivor, Old)이 동적으로 부여되는 상태이다. JVM의 힙 영역은 2048개의 Region으로 나뉠 수 있으며, 각 Region의 크기는 1MB ~ 32MB 사이로 지정될 수 있다.
+
+G1 GC에서 생판 처음 보는 영역들을 알아보자.
+
+- **Humonous** - Region 크기의 50%를 초과하는 큰 객체를 저장하기 위한 공간으로, 이 Region에서는 GC 동작이 최적으로 동작하지 않는다.
+- **Available / Unused** - 아직 사용되지 않은 Region을 의미한다.
+
+
+
+G1 GC에서 **Young GC**를 수행할 때는 STW 시간을 최대한 줄이기 위해서 멀티 스레드로 GC를 수행한다. Young GC는 각 Region 중 GC 대상 객체가 가장 많은 Region(Eden 또는 Survivor 역할) 에서 수행되며, 이 Region에서 살아 남은 객체를 다른 Region(Survivor 역할) 으로 옮긴 후, 비워진 Region을 사용 가능한 Region으로 돌리는 형태로 동작한다.
+
+G1 GC에서 **Major GC**를 수행할 때는 **Initial Mark -> Root Region Scan -> Concurrent Mark -> Remark -> Cleanup -> Copy** 단계를 거치게 된다.
+
+- **Initial Mark**
+
+  Old Region에 존재하는 객체들이 참조하는 Survivor Region을 찾는다. 이 과정에서도 STW가 발생한다.
+
+- **Root Region Scan**
+
+  Initial Mark에서 찾은 Survivor Region에 대한 GC 대상 객체 스캔 작업을 진행한다.
+
+- **Concurrent Mark**
+
+  전체 힙의 Region에 대해 스캔 작업을 진행하며, GC 대상 객체가 발견되지 않은 Region은 이후 단계를 처리하는데 제외시킨다.
+
+- **Remark**
+
+  애플리케이션을 멈추고(STW) 최종적으로 GC 대상에서 제외될 객체(살아남을 객체)를 식별한다.
+
+- **Cleanup**
+
+  애플리케이션을 멈추고(STW) 살아있는 객체가 가장 적은 Region에 대한 미사용 객체 제거를 수행한다. 이후 STW를 끝내고, 앞선 GC 과정에서 와전히 비워진 Region을 Freelist에 추가하여 재사용될 수 있게 한다.
+
+- **Copy**
+
+  GC 대상 Region이었지만 Cleanup 과정에서 완전히 비워지지 않은 Region의 살아 남은 객체들을 새로운 (Available / Unused) Region에 복사하여 Compaction 작업을 수행한다.
+
+
+![Alt G1FullGC](https://mirinae312.github.io/img/jvm_gc/G1FullGC.png)
+
+
+
+**The Z GC** (-XX:+UseZGC)
+
+Java 11 부터 추가된 GC이다. 확장 가능한 낮은 레이턴시의 GC라고 한다..
+
+GC가 동작할 때 STW 로 인해 성능에 큰 영향을 미쳐왔는데, Z GC는 애플리케이션과 Concurrently하게 동작하는데, Heap Reference를 위해 Load barrier를 사용한다. 사실 무슨 말인지 아직 잘 모르겠다... Z GC가 내세우는 가장 큰 장점 중 하나가 STW의 시간이 절대 10ms 를 넘지 않는 것이라는데, 버전이 업데이트되다 보면 언젠가 이 방식이 디폴트가 될지도 모를 일이다. 허허
 
 
 
@@ -106,6 +187,8 @@ Old 영역은 기본적으로 데이터가 가득 차면 GC를 실행한다. GC 
 
 ##### Reference
 
+https://docs.oracle.com/en/java/javase/15/
+
 https://d2.naver.com/helloworld/1329
 
 https://plumbr.io/blog/garbage-collection/minor-gc-vs-major-gc-vs-full-gc
@@ -115,3 +198,5 @@ https://gyoogle.dev/blog/computer-language/Java/Garbage%20Collection.html
 https://medium.com/@joongwon/jvm-garbage-collection-algorithms-3869b7b0aa6f
 
 https://mirinae312.github.io/develop/2018/06/04/jvm_gc.html
+
+https://readystory.tistory.com/48
