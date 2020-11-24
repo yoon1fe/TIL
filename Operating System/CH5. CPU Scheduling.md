@@ -193,6 +193,12 @@ FPFS는 프로세스의 순서에 따라 `waiting time`에 상당한 영향을 �
 
 
 
+ 좀 더 똑똑하게 하려면 history 중요도가 멀어질수록(옛날 정보일수록) 가중치를 아주 급격히 낮추어서 줄 수도 있다.(exponential 하게)
+
+![img](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2FcHhbgn%2FbtqN8fQlG8S%2Fm33wUgjfWIIkEinTxmAVD1%2Fimg.png)
+
+
+
 ####  
 
 ####  
