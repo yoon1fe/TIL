@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+	PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.yoon1fe.mapper.BoardMapper">
+	<select id="getList" resultType="org.yoon1fe.domain.BoardVO">
+	<![CDATA[select * from tbl_board where bno > 0 ]]>
+	</select>
+
+	<select id="getListWithPaging"
+		resultType="org.yoon1fe.domain.BoardVO">
+	<!-- CDATA 섹션은 XML에서 사용할 수 없는 부등호(>, < 등) 사용하기 위함 -->
+	<![CDATA[
+	select 
+		title, content, writer, regdate, updatedate
+	from
+	 	(
+	 	select /*+INDEX_DESC(tbl_board pkboard) */
+	 		rownum rn, bno, title, content, writer, regdate, updatedate
+	 	from
+	 		tbl_board
+	 	where rownum <= #{pageNum} * #{amount}
+		)
+	where rn > (#{pageNum} - 1) * #{amount}
+	]]>
+	</select>
+
+	<insert id="insert">
+		insert into tbl_board (bno, title, content, writer)
+		values (seq_board.nextval, #{title}, #{content}, #{writer})
+	</insert>
+
+	<insert id="insertSelectKey">
+		<selectKey keyProperty="bno" order="BEFORE"
+			resultType="long">
+			select seq_board.nextval from dual
+		</selectKey>
+
+		insert into tbl_board (bno, title, content, writer)
+		values (#{bno},
+		#{title}, #{content}, #{writer})
+	</insert>
+
+	<select id="read" resultType="org.yoon1fe.domain.BoardVO">
+		select * from tbl_board where bno = #{bno}
+	</select>
+
+	<delete id="delete">
+		delete from tbl_board where bno = #{bno}
+	</delete>
+
+	<update id="update">
+		update tbl_board
+		set title = #{title},
+		content =
+		#{content},
+		writer = #{writer},
+		updateDate = sysdate
+		where bno = #{bno}
+	</update>
+</mapper>
