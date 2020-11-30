@@ -181,7 +181,7 @@ e.g) printf() 함수의 라이브러리 코드
 
 ### 사용자 프로세스 영역의 할당 방법
 
-#### Continuous allocation -> 옛날 방식
+#### Contiguous allocation -> 옛날 방식
 
 각각의 프로세스가 메모리의 연속적인 공간에 적재(load)되도록 하는 방법이다.
 
@@ -360,7 +360,7 @@ Physical memory를 동일한 크기의 frame으로 나누고, logical memory를 
 
 External fragmentation은 발생하지 않는다.
 
-Internal fragmentation은 발생할 수 있다. (page frame의 크기 > 마지막 page의 크기)
+**Internal fragmentation**은 발생할 수 있다. **(page frame의 크기 > 마지막 page의 크기)**
 
 
 
@@ -578,7 +578,7 @@ data 영역이나 stack 영역은 수정할 수 있기 때문에 read / write �
 
 모든 프로세스 별로 logical address에 대응되는 모든 페이지에 대해 page table entry가 존재하고,
 
-대응하는 페이지가 메모리에 있든 없든 페이지 테이블에는 엔트리로써 존재하기 때문이다.
+대응하는 페이지가 메모리에 있든 없든 페이지 테이블에는 엔트리로서 존재하기 때문이다.
 
 
 
