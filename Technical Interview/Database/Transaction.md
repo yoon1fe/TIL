@@ -64,7 +64,37 @@
 
 **Phantom Read**
 
-하나의 트랜잭션 내에서 같은 쿼리를 두 번 수행하는데, **첫 번째 쿼리의 결과에 없던 Phantom Record가 두 번째 쿼리의 결과에 나타나는 현상**을 말한다. 
+하나의 트랜잭션 내에서 같은 쿼리를 두 번 수행하는데, **첫 번째 쿼리의 결과에 없던 Phantom Record가 두 번째 쿼리의 결과에 나타나는 현상**을 말한다. 이는 트랜잭션 도중 **새로운 레코드가 삽입되는 것을 허용하는 경우** 나타난다.
+
+
+
+#### [Shared Lock과 Exclusive Lock]
+
+**S Lock(Shared Lock, 공유 잠금)**
+
+읽기 잠금(Read lock)이라고도 한다.
+
+데이터를 다른 사용자가 동시에 읽을 수 있도록 하되, 변경은 불가능하게 하는 lock이다.
+
+-> 어떤 자원에 shared lock이 동시에 여러 개 적용될 수 있다.
+
+-> 어떤 자원에 shared lock이 하나라도 걸려 있으면 exclusive lock을 걸 수 없다.
+
+
+
+**X Lock(Exclusive lock, 배타적 잠금)**
+
+쓰기 잠금(Write lock)이라고도 한다.
+
+어떤 트랜잭션에서 데이터를 변경하고자 할 때 해당 트랜잭션이 완료될 때까지 해당 테이블 혹은 레코드를 다른 트랜잭션에서 읽거나쓰지 못하게 하기 위해 Exclusive lock을 걸고 트랜잭션을 진행시키는 것이다.
+
+-> exclusive lock에 걸리면 shared lock을 걸 수 없다.
+
+-> exclusive lock에 걸린 테이블, 레코드 등의 자원에 대해 다른 트랜잭션이 exclusive lock을 걸 수 없다.
+
+
+
+구체적으로 RX, RS, SRX, X 등 다양한 Lock 이 존재한다.
 
 
 
@@ -73,6 +103,12 @@
 #### [Isolation level 종류]
 
 ![img](https://lh5.googleusercontent.com/tZw21bL_9t54TegSAmMPDHePlYr5Yp43L3Jm4M_4pXjmMNAdAG2DrdunrxeFDG6mLQS_2atKCpp-dRe1SjFZb7S0H4g0_gGFxKpQ4ZZLppbDBfRTJOs63W6Xq0Ujhc3o0MfzUFSC)
+
+
+
+
+
+
 
 
 
@@ -118,11 +154,11 @@
 
 4. **Serializable (레벨 3)**
 
-   트랜잭션이 완료될 때까지 SELECT 문장이 사용하는 모든 데이터에 shared lock이 걸리는 계층.
+   모든 작업을 하나의 트랜잭션에서 처리하는 것과 같은 가장 높은 고립 수준.
 
    
    
-   완벽한 읽기 일관성 모드를 제공한다. 다른 사용자는 트랜잭션 영역에 해당되는 데이터에 대한 수정 및 입력이 불가능하다.
+   완벽한 읽기 일관성 모드를 제공한다. 다른 사용자는 트랜잭션 영역에 해당되는 데이터에 대한 수정 및 입력이 불가능하다. 하지만 동시성 처리 효율이 매우 떨어지기 때문에 RDB에서 잘 사용하지 않는다.
 
 
 
