@@ -1,5 +1,11 @@
 # Virtual Memory
 
+멀티 프로그래밍을 위해서는 여러 개의 프로세스들을 동시에 메모리에 올려두어야 한다. 가상 메모리 기법은 **프로세스 전체가 메모리 내에 올라오지 않더라도 실행이 가능하도록 하는 기법**으로, 말 그대로 없는 것을 있는 것처럼 보이게 하는 기술이다. 
+
+하나의 프로그램은 실질적으로 사용하는 메모리가 그리 많지 않다. 따라서 프로그램을 실행할 때, 프로그램 전체를 메모리에 올리지 않고 일부분만 올림으로써 더 많은 프로그램을 메모리에 올릴 수 있는 것이다. -> 결국 이 역시도 리소스를 최대한 쥐어짜내기 위함이다.
+
+
+
 물리적인 메모리의 주소 변환은 운영체제가 관여하지 않는다.
 
 하지만 virtual memory 부분은 운영체제가 전적으로 관여한다.
@@ -20,10 +26,10 @@ Paging 기법은 프로그램이 실행될 때 그 프로세스를 구성하는 
 
 Damand Paging 기법을 사용함으로써,
 
-- I/O 양의 감소 - 프로그램에서 빈번히 사용되는 공간은 지극히 제한적이다. 좋은 SW는 특별한 예외 상황에 대한 대비를 해 놓는데, 그런 잘 사용되지 않는 부분을 올리지 않고 필요한 부분만 올림으로써 I/O 양을 줄일 수 있다.
-- Memory 사용량 감소
-- 빠른 응답 시간
-- 더 많은 사용자 수용
+- **I/O 양의 감소** - 프로그램에서 빈번히 사용되는 공간은 지극히 제한적이다. 좋은 SW는 특별한 예외 상황에 대한 대비를 해 놓는데, 그런 잘 사용되지 않는 부분을 올리지 않고 필요한 부분만 올림으로써 I/O 양을 줄일 수 있다.
+- **Memory 사용량 감소**
+- **빠른 응답 시간**
+- **더 많은 사용자 수용**
 
 와 같은 이점이 있다.
 
@@ -35,7 +41,7 @@ Invalid - 사용되지 않는 주소 영역인 경우나 페이지가 물리적 
 
 처음에는 모든 page entry가 invalid로 초기화되어 있다.
 
-주소 변환 시에 invalid bit이 set 되어 있으면 **`page fault`** 가 발생한다.
+주소 변환 시에 invalid bit이 set 되어 있으면 **page fault** 가 발생한다.
 
 
 
@@ -43,7 +49,7 @@ Invalid - 사용되지 않는 주소 영역인 경우나 페이지가 물리적 
 
 ## Page Fault
 
-invalid page를 접근하면 MMU가 trap을 발생시키게 되고 (page fault trap), CPU가 운영체제에게로 넘어간다. (Kernel mode)
+invalid page를 접근하면 MMU가 trap을 발생시키게 되고 (page fault trap), CPU가 운영체제에게로 넘어간다. **(Kernel mode)**
 
 Kernel mode에서 page fault handler(프로그램)가 호출된다. 
 
@@ -102,8 +108,6 @@ reference string의 예
 
 **그럼, 어떤 알고리즘이 가장 좋은 알고리즘일까?**
 
-
-
 ## Page Replacement Algorithm
 
 
@@ -126,7 +130,9 @@ reference string의 예
 
 
 
-실제로 사용하는 알고리즘은 미래를 알 수 없기 때문에, 과거의 정보를 바탕으로 victim을 선정한다.
+
+
+실제로 사용하는 알고리즘은 미래를 알 수 없기 때문에, **과거의 정보를 바탕**으로 victim을 선정한다.
 
 
 
@@ -134,7 +140,7 @@ reference string의 예
 
 가장 단순한 알고리즘으로, **먼저 들어온 것을 먼저 내쫓는** 알고리즘이다.
 
-![image-20200923202145347](C:\Users\1Fe\AppData\Roaming\Typora\typora-user-images\image-20200923202145347.png)
+![image-20200923202145347](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2FcgzwxL%2FbtqJrxHgY1G%2F3dtKHmqTf4dB8O3VZwZzsk%2Fimg.png)
 
 > 15 page faults
 
@@ -152,7 +158,7 @@ reference string의 예
 
 가장 덜 최근에 사용된 프레임을 victim으로 선정하는 알고리즘이다.
 
-즉, **사용한지 가장 오래된 프레임**을 쫓아낸다.
+즉, **사용한지(참조된지) 가장 오래된 프레임**을 쫓아낸다.
 
 ![image-20200923202238875](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2FbqVw55%2FbtqJofmRLSr%2FRJjLf7I4h3mGzFEo6a6Q11%2Fimg.png)
 
@@ -162,12 +168,22 @@ reference string의 예
 
 ### LFU(Least Frequently Used) Algorithm
 
-**참조 횟수(reference count)가 가장 적은** 페이지 프레임을 victim으로 선정하는 알고리즘이다.
+**참조 횟수(reference count)가 가장 적은페이지 프레임을** victim으로 선정하는 알고리즘이다. 참조 횟수가 적은 페이지가 뒤에도 참조될 가능성이 낮을 것이라는 가정을 둔 알고리즘이다.
 
 최저 잠조 횟수인 페이지가 여러 개인 경우에는
 
 - LFU 알고리즘 자체에서는 여러 페이지들 중 임의의 페이지를 선정한다.
 - 성능 향상을 위해서 가장 오래 전에 참조된 페이지를 선정할 수도 있다.
+
+
+
+### MFU(Most Frequently Used) Algorithm
+
+LFU 알고리즘과 반대로 **참조 횟수가 가장 많은 페이지 프레임**을 victim으로 선정하는 알고리즘이다. 참조가 많이 된 페이지가 앞으로는 참조될 가능성이 낮을 것이라는 가정을 둔 알고리즘이다.
+
+
+
+**LFU, MFU와 같이 Counting에 기반한 두 알고리즘은 Optimal Algorithm의 성능에 제대로 근사하지 못하기 때문에, 잘 쓰이지 않는다.**
 
 
 
@@ -231,6 +247,8 @@ Second chance Algorithm, NUR(Not Used Recently), NRU(Not Recently Used) 라고�
 
 **Reference bit**를 사용해서 교체 대상 페이지를 선정한다. 
 
+reference bit는 OS에 의해 초기에 0으로 초기화되고, 해당 페이지가 참조되었을 때 하드웨어에 의해 1로 변경된다.
+
 ![image-20200923221049955](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2Fc7dpXv%2FbtqJsvWMXBJ%2FKphfBpEEYHIWgW7FGRgk11%2Fimg.png)
 
 해당 페이지가 참조되면 그 페이지의 reference bit을 1로 set해줌으로써 참조가 되었다는 것을 표시해준다. 이는 운영체제가 아닌 하드웨어가 담당하는 일이다.
@@ -247,11 +265,11 @@ reference bit가 0이라는 것은 운영체제가 모든 페이지를 탐색하
 
 **modified bit(= dirty bit)**을 함께 사용하는 방법이다.
 
-modified bit은 해당 페이지가 수정이 되었는지를 표시하는 비트이다.
+modified bit은 **해당 페이지가 수정이 되었는지를 표시하는 비트**이다.
 
 - 0: 메모리에 올라온 후 수정되지 않은 페이지를 의미한다. 이미 backing store의 값과 동일하기 때문에 backing store에 새로 쓸 필요 없이 물리적 메모리에서 쫓아내는 작업만 수행한다.
 
-- 1: 메모리에 올라온 이후 한 번 이상 내용을 수정한 페이지. backing store에 수정사항을 반영하고 메모리에서 쫓아낸다.
+- 1: 메모리에 올라온 이후 한 번 이상 내용을 수정한 페이지이다. backing store에 수정사항을 반영하고 메모리에서 쫓아낸다.
 
 따라서 reference bit의 값이 0이고 modified bit의 값이 0인 것과 1인 것 두가지가 존재할 경우에는 0인 페이지를 victim으로 선정하는 것이 좋다.
 
@@ -266,6 +284,10 @@ modified bit은 해당 페이지가 수정이 되었는지를 표시하는 비�
 
 
 
+따라서 (R, M) 이 있을 때, **(1, 1) -> (1, 0) -> (0, 1) -> (0, 0)** 순으로 victim으로 정하기 좋다.
+
+
+
 
 
 ## Page Frame의 Allocation
@@ -277,6 +299,8 @@ modified bit은 해당 페이지가 수정이 되었는지를 표시하는 비�
 
 
 Allocation problem: 각 프로세스에 얼마만큼의 페이지 프레임을 할당할 것인가?
+
+
 
 #### Allocation의 필요성
 
@@ -306,7 +330,7 @@ replace 시 다른 프로세스에 할당된 프레임을 빼앗아 올 수 있�
 
 FIFO, LRU, LFU 등의 알고리즘을 global replacement로 사용시에 해당한다.
 
-Working set, PFF 알고리즘을 사용한다.
+
 
 
 
@@ -320,13 +344,11 @@ FIFO, LRU, LFU 등의 알고리즘을 프로세스 별로 운영시에 해당한
 
 
 
-
-
 ### Thrashing
 
 #### Thrashing이란
 
-프로세스의 원활한 수행에 필요한 최소한의 페이지 프레임 수를 할당받지 못한 경우를 말한다.
+Thrashing이란 **프로세스의 원활한 수행에 필요한 최소한의 페이지 프레임 수를 할당받지 못한 경우**를 말한다.
 
 ![image-20200923225042835](https://img1.daumcdn.net/thumb/R1280x0/?scode=mtistory2&fname=https%3A%2F%2Fblog.kakaocdn.net%2Fdn%2Fbyhqct%2FbtqJpgMzzWl%2F3F4PKKYJdyF6Zes7FR7RxK%2Fimg.png)
 
