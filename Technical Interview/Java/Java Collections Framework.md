@@ -16,6 +16,8 @@ Java Collections Framework란 일반적으로 재사용 가능한 컬렉션 자�
 
 
 
+
+
 #### [Map Interface] - key-value 로 데이터 핸들링
 
 ![Java Map Hierarchy](https://static.javatpoint.com/images/core/java-map-hierarchy.png)
@@ -28,13 +30,13 @@ Java Collections Framework란 일반적으로 재사용 가능한 컬렉션 자�
 
 대표적으로 다음과 같은 세 가지 인터페이스가 존재한다.
 
-1. List
-2. Set 
-3. Map
+1. **List**
+2. **Set** 
+3. **Map**
 
 
 
-List, Set 인터페이스는 컬렉션 인터페이스를 상속받는다. 따라서 List 인터페이스와 Set 인터페이스의 공통된 부분을 컬렉션 인터페이스에서 정의하고 있다. 반면, Map 인터페이스는 구조상의 차이(Key-Value)로 인해 컬렉션 인터페이스를 상속받지 않고 별도로 정의되었다. 
+List, Set 인터페이스는 Collection 인터페이스를 상속받는다. 따라서 List 인터페이스와 Set 인터페이스의 공통된 부분을 Collection 인터페이스에서 정의하고 있다. 반면, Map 인터페이스는 구조상의 차이(Key-Value)로 인해 Collection 인터페이스를 상속받지 않고 별도로 정의되었다. 
 
 
 
@@ -83,6 +85,75 @@ List 인터페이스는 **순서가 있는** 컬렉션으로, **중복 요소를
 - 시간 복잡도: O(1)
 
 동기화를 지원하지 않아 vector보다 빠르다.
+
+
+
+ArrayList는 생성자의 파라미터로 크기를 초기화할 수 있다.
+
+```java
+	{
+    	...
+        List<Integer> list = new ArrayList<>(5);	// 크기 5로 초기화
+        ...
+	}
+    
+    
+    public ArrayList(int initialCapacity) {
+        if (initialCapacity > 0) {
+            this.elementData = new Object[initialCapacity];
+        } else if (initialCapacity == 0) {
+            this.elementData = EMPTY_ELEMENTDATA;
+        } else {
+            throw new IllegalArgumentException("Illegal Capacity: "+
+                                               initialCapacity);
+        }
+    }
+```
+
+
+
+그럼 **데이터가 6개 째 들어오면 어떻게 될까?** 
+
+답은 grow() 메소드 안에서 호출하는 newCapacity() 메소드에 있다.
+
+newCapacity() 메소드를 보면 capacity 범위를 넘어가는 경우 기존의 capacity의 1.5배만큼 새로운 capacity로 지정해준다.
+
+```java
+    private void add(E e, Object[] elementData, int s) {
+        if (s == elementData.length)
+            elementData = grow();
+        elementData[s] = e;
+        size = s + 1;
+    }
+
+    private Object[] grow(int minCapacity) {
+        return elementData = Arrays.copyOf(elementData,
+                                           newCapacity(minCapacity));
+    }
+
+    private Object[] grow() {
+        return grow(size + 1);
+    }
+
+    private int newCapacity(int minCapacity) {
+        // overflow-conscious code
+        int oldCapacity = elementData.length;
+        // 기존 oldCapacity의 1.5배만큼 새로 지정
+        int newCapacity = oldCapacity + (oldCapacity >> 1);
+        if (newCapacity - minCapacity <= 0) {
+            if (elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA)
+                return Math.max(DEFAULT_CAPACITY, minCapacity);
+            if (minCapacity < 0) // overflow
+                throw new OutOfMemoryError();
+            return minCapacity;
+        }
+        return (newCapacity - MAX_ARRAY_SIZE <= 0)
+            ? newCapacity
+            : hugeCapacity(minCapacity);
+    }
+```
+
+
 
 
 
@@ -260,6 +331,8 @@ SortedMap 인터페이스는 매핑을 오름차순의 키 순서로 유지하�
 
 
 **Reference**
+
+http://infotechgems.blogspot.com/2011/11/java-collections-performance-time.html
 
 https://www.javatpoint.com/collections-in-java
 
