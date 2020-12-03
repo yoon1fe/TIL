@@ -4,7 +4,7 @@
 
 C/C++ 프로그래밍을 할 때는 메모리 누수(Memoeyr leak)를 막기 위해 객체를 생성한 후 사용하지 않는 객체의 메모리를 프로그래머가 직접 해제해주어갸 했다. 하지만, 자바에서는 JVM의 구성 요소 중 하나인 **Garbage Collection(GC)이 자동으로 사용되지 않는 객체를 해제**한다.
 
-JVM의 메모리는 총 5가지 영역(method, heap, stack, PC, Nativ method stack)으로 나뉘는데, GC는 Heap 영역만 다룬다. 일반적으로 다음과 같은 경우가 GC의 대상이 된다.
+JVM의 메모리는 총 5가지 영역(method, heap, stack, PC, Native method stack)으로 나뉘는데, GC는 Heap 영역만 다룬다. 일반적으로 다음과 같은 경우가 GC의 대상이 된다.
 
 1. 객체가 NULL인 경우 (e.g String str = null;)
 2. 블럭 실행 종료 후, 블럭 안에서 생성된 객체
@@ -21,7 +21,7 @@ GC에 대해서 알아보기 전에 **'stop-the-world'**란 단어를 알아야 
 1. 대부분의 객체는 금방 접근 불가능 상태(unreachable)가 된다.
 2. 오래된 객체에서 젊은 객체로의 참조는 아주 적게 존재한다.
 
-이러한 가설을 **'weak generational hypothesis'**라고 한다. 이 가정의 장점을 최대화하기 위해 HotSpot VM에서는 크게 두 개의 물리적인 공간을 나누었다. 이를 각각 Young 영역, Old 영역이라고 한다.
+이러한 가설을 **'weak generational hypothesis'**라고 한다. 이 가정의 장점을 최대화하기 위해 HotSpot VM에서는 크게 두 개의 물리적인 공간을 나누었다(java 최신 버전에서는 아니다..ㅎ). 이를 각각 Young 영역, Old 영역이라고 한다.
 
 
 
@@ -129,7 +129,7 @@ G1 GC는 바둑판 모양의 각 영역에 객체를 할당하고 GC를 실행�
 
 G1 GC에서 생판 처음 보는 영역들을 알아보자.
 
-- **Humonous** - Region 크기의 50%를 초과하는 큰 객체를 저장하기 위한 공간으로, 이 Region에서는 GC 동작이 최적으로 동작하지 않는다.
+- **Humongous** - Region 크기의 50%를 초과하는 큰 객체를 저장하기 위한 공간으로, 이 Region에서는 GC 동작이 최적으로 동작하지 않는다.
 - **Available / Unused** - 아직 사용되지 않은 Region을 의미한다.
 
 

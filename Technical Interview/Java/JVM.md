@@ -14,7 +14,7 @@ Java Virtual Machine (JVM)이란 **자바 바이트 코드를 실행할 수 있�
 
 3. **Class loader를 통해 class 파일들을 JVM으로 로딩**한다.
 
-4. 로딩된 **class 파일들은 Execution engine을 통해 해석**된다.
+4. 로딩된 **class 파일들은 Execution engine을 통해 기계어로 해석**된다.
 
 5. 해석된 바이트 코드는 **Runtime Data Area에 배치되어 실질적인 수행**이 이루어지게 된다.
 
@@ -94,7 +94,7 @@ Java Virtual Machine (JVM)이란 **자바 바이트 코드를 실행할 수 있�
 
 5. **Heap (힙 영역)**
 
-   객체를 저장하는 가상 메모리 공간이다. new 연산자로 생성된 객체와 배열을 저장한다. 물론 Method area 영역에 올라온 클래스들만 객체로 생성할 수 있다. 힙은 세부적으로 세 부분으로 나눌 수 있다.
+   객체를 저장하는 가상 메모리 공간이다. new 연산자로 생성된 객체와 배열을 저장한다. 물론 Method area 영역에 올라온 클래스들만 객체로 생성할 수 있다. 힙은 세부적으로 세 부분으로 나눌 수 있다. (Generational Algorithm에서)
 
    1. **Young Generation**
 
