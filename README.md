@@ -7,11 +7,10 @@
 
 ### :yum: 목표 | 현황
 
-> JPA 
+> JPA - 자바 ORM 표준 JPA 프로그래밍 - 기본편
 >
-> Effective Java
+> Effective Java - Joshua Bloch
 >
 > JavaScript
 >
 > React..?
-
