@@ -184,46 +184,49 @@ LocalDate(DB에서 date), LocalDateTime(DB에서 timestamp) 사용할 때는 생
 
 
 
----
 
-여기서부터 다시 듣기!!
 
 ### 기본 키 매핑
 
-직접 할당: @Id만 사용
+- 직접 할당: `@Id`만 사용하면 된다.
 
-자동 생성: @GeneratedValue
+- 자동 생성: `@GeneratedValue`
 
-IDENTIY
+  - 옵션 - `strategy = GenerationType.****`
 
-- 기본 키 생성을 DB에 위임, MySQL - DB야 알아서 해줘!
-- em.persist(member); -> 호출한 시점에 실제로 insert 쿼리를 날린다.
-- 
+  - `IDENTIY`
 
-SEQUENCE
+    기본 키 생성을 DB에 위임, MySQL의 AUTO INCREMENT - DB야 알아서 해줘!
 
-- 데이터베이스 시퀀스 오브젝트 사용, ORACLE
+    JPA는 보통 트랜잭션 커밋 시점에 INSERT SQL을 실행한다.
 
-TABLE: 
+    그런데, AUTO_INCREMENT는 데이터베이스에 INSERT SQL을 실행한 이후에 ID 값을 알 수 있다.
 
-AUTO: 디폴트!
+    따라서 IDENTITY 전략은 em.persist(); 시점에 즉시 INSERT SQL을 실행하고 DB에서 식별자를 조회한다.
+
+  - `SEQUENCE`
+
+    데이터베이스 시퀀스 오브젝트 사용. `@SequenceGenerator` 어노테이션으로 시퀀스 생성
+
+    initialValue, allocationSize 등과 같은 속성으로 성능 최적화 가능한데.. 이건 나중에 공부해보자
+
+  - `TABLE`
+
+    키 생성 전용 테이블을 하나 만들어서 데이터베이스 시퀀스를 흉내내는 전략.
+
+    장점 - 모든 데이터베이스에 적용 가능하다.
+
+    단점 - 성능
+
+    `@TableGenerator	` 어노테이션으로 테이블 생성 
+
+  - `AUTO`: 디폴트!
 
 
 
-권장하는 식별자 전략
+#### 권장하는 식별자 전략
 
-- 기본키 제약 조건: not null, unique, 불변
+- **기본키 제약 조건**: not null, unique, 변하면 안된다(지키기 어렵다)!
 - 미래까지 이 조건을 만족하는 자연키(전화번호, 주민등록번호 등)는 찾기 어렵다. 대리키(대체키, 비즈니스와 상관없는 키)를 사용하자
-- 예를 들어 주민등록번호도 기본 키로 적절하지 않다!!
-- 권장: Long 형 + 대체키 + 키 생성 전략
-
-
-
-
-
-
-
-### 실전 예제 -1. 요구사항 분석과 기본 매핑
-
-테이블 설계 -> 엔티티 설계와 매핑
-
+- 예를 들어 주민등록번호도 기본 키로 적절하지 않다!! 요새는 주민등록번호도 바꿀 수 있거든
+- 권장: Long 형 + 대체키 + 키 생성 전략 
