@@ -179,8 +179,6 @@ List<Member> members = findMember.getTeam().getMembers();
 
 
 
-
-
 ### 연관관계의 주인과 mappedBy
 
 - mappedBy == JPA 계의 진정한 포인터..! 처음에 이해하기 몹시 어렵다.
@@ -269,15 +267,89 @@ public class Team {
 
 
 
-
-
----
-
 ### 양방향 매핑 시 가장 많이 하는 실수
 
+- 연관관계의 주인에 값을 입력하지 않는 실수!
+
+``` java
+Team team = new Team();
+team.setName("teamA");
+em.persist(team);
+
+Member member = new Member();
+member.setName("member1");
+
+// 역방향(주인이 아닌 방향)만 연관관계 설정
+team.getMembers().add(member);
+
+em.persist(member);
+```
+
+현재 Member 클래스의 team 이 연관관계의 주인이다. mappedBy 는 읽기 전용이므로 가짜 매핑이다. 따라서 team 을 먼저 생성하고 ,`member.setTeam(team);` 으로 넣어주어야 한다. 둘다 넣어도 된다! 
 
 
 
+#### **양방향 매핑 시에는 연관관계의 주인에 값을 입력해야 한다!**
+
+- 순수한 객체 관계를 고려하면 항상 향쪽 다 값을 넣어주는 게 맞다 ㅎ
+
+  안 넣어주면? 
+
+  1. 1차 캐시에서 갖고 오는 team 의 members에는 아무 것도 안들어있겠지
+  2. 테스트 케이스는 JPA 코드 없이 순수 자바 코드로만 이루어지므로!
+
+``` java
+Team team = new Team();
+team.setName("teamA");
+em.persist(team);
+
+Member member = new Member();
+member.setName("member1");
+
+team.getMembers().add(member);
+member.setTeam(team);
+
+em.persist(member);
+```
+
+
+
+### 양방향 매핑 시 가장 많이 하는 실수 - 정리 
+
+- 순수 객체 상태를 고려해서 항상 양쪽에 값을 설정하자
+
+- 연관관계 편의 메서드를 생성하자
+
+  ex) Member 클래스에서
+
+  ``` java
+  public void setTeam(Team team) {
+    this.team = team;
+    team.getMembers().add(this);
+  }
+  ```
+
+  추가적으로, 선생님은 이런 경우에 단순히 set~~~ 라고 이름 짓지 않고, changeTeam() 같은 식으로 지어서 단순한 자바에서의 setter, getter 역할을 하는 메서드가 아닌, 특수한 역할을 하는 메서드임을 명시해준다고 한다!
+
+- 양방향 매핑 시에 무한 루프를 조심하자
+
+  ex) toString(), lombok, JSON 생성 라이브러리 등
+
+
+
+### 양방향 매핑 정리
+
+- **단방향 매핑만으로도 이미 연관관계 매핑은 완료된 것이다!**
+- 양방향 매핑은 반대 방향으로 조회(객체 그래프 탐색) 기능이 추가된 것 뿐이라고 생각해야 한다.
+- JPQL에서 역방향으로 탐색할 일이 많다.
+- 단방향 매핑을 잘 하고 양방향은 필요할 때 추가해도 된다~!
+
+
+
+### 연관관계의 주인을 정하는 기준!
+
+- 비즈니스 로직을 기준으로 연관관계의 주인을 선택하면 안된다!!
+- **연관관계의 주인은 외래 키의 위치를 기준**으로 정해야 한다!
 
 
 
