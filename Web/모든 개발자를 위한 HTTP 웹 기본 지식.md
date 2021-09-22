@@ -447,10 +447,10 @@ Content-Length: 3424
 **다시 설계해보자**
 
 - 회원 목록 조회 - `/members`
-- 회원 조회 - `/members/{id}
-- 회원 등록 - `/members/{id}
-- 회원 수정 - `/members/{id}
-- 회원 삭제 - `/members/{id}
+- 회원 조회 - `/members/{id}`
+- 회원 등록 - `/members/{id}`
+- 회원 수정 - `/members/{id}`
+- 회원 삭제 - `/members/{id}`
 
 ** 참고: 계층 구조상 상위를 컬렉션으로 보고 복수 단어 사용을 권장!
 
@@ -628,13 +628,151 @@ Content-Length: 3424
 
 
 
-
-
-
-
-
-
 ## HTTP 메서드 활용
+
+### 클라이언트 -> 서버 데이터 전송
+
+**데이터 전달 방식은 크게 두 가지**
+
+- 쿼리 파라미터를 통한 데이터 전송
+  - GET
+  - 주로 정렬 필터(검색어)
+- 메시지 바디를 통한 데이터 전송
+  - POST, PUT, PATCH
+  - 회원 가입, 상품 주문, 리소스 등록, 리소스 변경
+
+
+
+#### 주로 네 가지 상황이 있다
+
+- 정적 데이터 조회
+
+  - 이미지, 정적 텍스트 문서
+
+- 동적 데이터 조회
+
+  - 주로 검색, 게시판 목록에서 정렬 필터(검색어)
+
+- HTML Form을 통한 데이터 전송
+
+  - 회원 가입, 상품 주문, 데이터 변경
+  - 디폴트 컨텐트 타입 - application/x-www-form-urlencoded <- form 의 내용을 메시지 바디를 통해 전송.
+  - Content-Type: multipart/form-data - 메시지 바디에 바이너리 데이터 들어감
+  - POST - HTTP 메시지 바디에 정보가 들어가고,
+  - GET - 쿼리 스트링에 들어간다. <- 조회에만 사용하자!
+  - 참고: HTML Form 전송은 POST, GET 만 지원!!
+
+- HTTP API를 통한 데이터 전송
+
+  - HTTP 요청 메시지를 아예 만들어서 전송. Content-Type 다 지정해서..
+
+  - 회원 가입, 상품 주문, 데이터 변경
+  - 서버 to 서버, 앱 클라이언트, 웹 클라이언트 (ajax)
+
+
+
+### HTTP API 설계 예시
+
+### 회원 관리 시스템
+
+#### API 설계 - POST 기반 등록
+
+- 회원 목록 - GET `/members`
+- 회원 등록 - POST `/members`
+- 회원 조회 - GET `/members/{id}`
+- 회원 수정 - PATCH, PUT, POST `/members/{id}`
+- 회원 삭제 - DELETE `/members/{id}`
+
+
+
+#### POST - 신규 자원 등록 특징
+
+- 클라이언트는 등록될 리소스의 URI를 모른다.
+
+  - 회원 등록 -  `POST /members`
+
+- 서버가 새로 등록된 리소스 URI를 생성해준다.
+
+  - HTTP/1.1 201 Created
+
+    Locatiopn: /members/100
+
+- 컬렉션
+
+  - 서버가 관리하는 리소스 디렉토리
+  - 서버가 리소스의 URI 를 생성하고 관리
+  - 여기서 컬렉션은 `/members`
+
+
+
+### 파일 관리 시스템
+
+#### API 설계 - PUT 기반 등록
+
+- 파일 목록 - GET `/files`
+- 파일 조회 - GET `/files/{filename}`
+- 파일 등록 - PUT `/files/{filename}`
+- 파일 삭제 - DELETE `/files/{filename}`
+- 파일 대량 등록 - POST `/files`
+
+
+
+#### PUT - 신규 자원 등록 특징
+
+- 클라이언트가 리소스 URI를 알고 있어야 한다.
+  - 파일 등록 PUT `/files/{filename}`
+  - PUT `/files/star.jpg`
+- 클라이언트가 직접 리소스의 URI를 지정한다.
+- 스토어
+  - 클라이언트가 관리하는 리소스 저장소
+  - 클라이언트가 리소스의 URI를 알고 관리
+  - 여기서 스토어는 `/files`
+
+
+
+### HTML FORM 사용
+
+- HTML form 은 GET, POST 만 지원한다..
+- 이는 ajax 같은기술을 사용해서 해결 가능!
+- 여기서는 순수 html, html form 이야기만 해보자
+
+
+
+- 회원 목록 - GET `/members`
+- 회원 등록 폼 - GET `/members/new`
+- 회원 등록 - POST `/members/new, /members`  등록 폼과 등록 url을 통일하는 것 추천..!
+- 회원 조회 - GET `/members/{id}`
+- 회원 수정 폼 - GET `/members/{id}/edit`
+- 회원 수정 - POST `/members/{id}/edit,/members/{id}`
+- 회원 삭제 - POST `/members/{id}/delete`
+
+
+
+-> html form은 GET, POST만 지원하므로 제약이 많다. 따라서 동사로 된 리소스 경로(컨트롤 URI)를 사용한다.
+
+HTTP 메서드로 해결하기 애매한 경우 사용한다.
+
+
+
+#### 참고하면 좋은 URI 설계 개념
+
+- 문서(Document)
+  - 단일 개념(파일 하나, 객체 인스턴스, 데이터베이스 row)
+  - `/members/100`, `/files/star.jpg`
+- 컬렉션(Collection)
+  - 서버가 관리하는 리소스 디렉터리
+  - 서버가 리소스의 URI를 생성하고 관리
+  - `/members`
+- 스토어(Store)
+  - 클라이언트가 관리하는 자원 저장소
+  - 클라이언트가 리소스의 URI를 알고 관리
+  - `/files`
+- 컨트롤러(Controller), 컨트롤 URI
+  - 문서, 컬렉션, 스토어가 해결하기 어려운 추가 프로세스 실행
+  - 동사를 직접 사용
+  - `/members/{id}/delete`
+
+
 
 
 
