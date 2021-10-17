@@ -13,16 +13,16 @@ JavaScript
 
 React..?
 
-21.06.07 ~ 21.08.17 Effective Java - Joshua Bloch :white_check_mark:
+`21.06.07 ~ 21.08.17` Effective Java - Joshua Bloch :white_check_mark:
 
 <br>
 
 #### 자바 스프링 완전 정복 시리즈
-스프링 입문 - 코드로 배우는 스프링 부트, 웹 MVC, DB 접근 기술
+`21.10.16 ~ ing` 스프링 입문 - 코드로 배우는 스프링 부트, 웹 MVC, DB 접근 기술
 
 스프링 핵심 원리 - 기본편
 
-21.09.11 ~ 21.10.05 모든 개발자를 위한 HTTP 웹 기본 지식 :white_check_mark:
+`21.09.11 ~ 21.10.05` 모든 개발자를 위한 HTTP 웹 기본 지식 :white_check_mark:
 
 스프링 MVC 1편 - 백엔드 웹 개발 핵심 기술
 
