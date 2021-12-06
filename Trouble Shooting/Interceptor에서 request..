@@ -1,0 +1,33 @@
+api 공통 인증 로직을 만들었다. Interceptor에서 인증 부분을 처리하고 싶은데... request body가 필요하다.
+
+근데  HttpServletRequest의 InputStream을 읽어 들이는 건 한 번만 가능하다.. 톰캣 차원에서 막아놨댄다..
+
+Wrapper 사용이나 ContentCachingRequestWrapper 사용... 근데 왜 안될까
+
+
+
+
+
+->>
+
+그런데 만약 Servlet Filter가 아닌 Spring Interceptor에서 이 wrapper 클래스를 사용할 예정이라면, 약간의 고려할 사항이 있습니다. Spring Interceptor를 만들면 context.xml에서 에서 등록을 해주게 될텐데요. 이는 곧 Spring의 DispatcherServlet에서 Interceptor를 핸들링 한다는 의미와 같겠습니다. 만약 Interceptor 내에서 wrapper를 만들어서 preHandle()에 넘겨주게되면 이후 Spring이 데이터를 바인딩할 때 결국 Stream이 닫혔다는 메시지를 다시 만나게됩니다!! 그 원인은 [Interceptor가 DispatcherServlet의 doDispatch메서드 내에서 열심히 for loop를 돌면서 실행된 뒤에 다음 구문에서 데이터 바인딩을 하러 가기 때문](https://github.com/spring-projects/spring-framework/blob/f41de12cf62aebf1be9b30be590c12eb2c030853/spring-webmvc/src/main/java/org/springframework/web/servlet/DispatcherServlet.java#L954-L959)입니다. 다시 말하면, Interceptor 내에서 preHandle()으로 넘겨준 request 객체가 데이터 바인딩 작업을 하러 갈때는 call by value에 따라 이미 사라지고 없다는 의미겠죠.
+
+
+
+->>
+
+`ContentCachingRequestWrapper cachingRequestWrapper = new ContentCachingRequestWrapper((HttpServletRequest) request);` 
+
+를 선언한 시점에 cachedContent가 없다...
+
+
+
+참고로 getInputStream()은 wrapper 에서도 한 번 사용하면 없어진다..
+
+
+
+
+
+##### Reference
+
+https://meetup.toast.com/posts/44
