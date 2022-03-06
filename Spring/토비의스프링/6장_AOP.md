@@ -708,6 +708,70 @@ public void pointcutAdvisor() {
 
 ### 6.5 스프링 AOP
 
+아직 부가 기능의 적용이 필요한 타겟 오브젝트마다 거의 비슷한 내용의 `ProxyFactoryBean` 빈 설정 정보를 추가해주어야 하는 문제가 있다. 프록시를 다이나믹하게 생성했던 것처럼, 반복적인 `ProxyFactoryBean` 설정 문제도 설정 자동 등록기법으로 해결하면 좋을 것 같다.
+
+
+
+빈 후처리기는 스프링 빈 오브젝트가 만들어진 이후에 다시 가공할 수 있게 해준다. 빈 후처리기는 `BeanPostProcessor` 인터페이스를 구현해서 만든다. `DefaultAdvisorAutoProxyCreator` 는 어드바이저를 이용한 자동 프록시 생성기이다. 빈 후처리기를 빈으로 등록해두면, 스프링은 빈 오브젝트가 생성될 때마다 빈 후처리기에 보내서 후처리 작업을 요청한다. 
+
+
+
+이를 잘 이용하면 스프링이 생성하는 빈 오브젝트의 일부를 프록시로 포장하고, 프록시를 빈으로 대신 등록할 수도 있다. 이것이 바로 **자동 프록시 생성 빈 후처리기**이다. 빈 후처리기는 프록시가 생성되면 원래 컨테이너가 전달해준 빈 오브젝트 대신 프록시 오브젝트를 컨테이너에게 돌려준다. 컨테이너는 최종적으로 빈 후처리기가 돌려준 오브젝트를 빈으로 등록하고 사용한다.
+
+
+
+![img](https://blog.kakaocdn.net/dn/bkGXBZ/btqPAuX9Atp/2ZxRpcdGnUGPjWMlrLNQkK/img.png)
+
+
+
+적용할 빈이 선정하는 로직이 추가된 포인트컷이 담긴 어드바이저를 등록하고 빈 후처리기를 사용하면 일일이 `ProxyFactoryBean` 빈을 등록하지 않아도 타겟 오브젝트에 자동으로 프록시가 적용되게 할 수 있게 된다. 포인트컷에는 메서드만 선정하는 것 뿐만 아니라, 어떤 빈에 프록시를 적용할지를 선택하는 기능도 있다.
+
+
+
+```java
+package org.springframework.aop;
+
+public interface Pointcut {
+    Pointcut TRUE = TruePointcut.INSTANCE;
+
+    ClassFilter getClassFilter();				// 프록시를 적용할 클래스인지 확인
+
+    MethodMatcher getMethodMatcher();		// 어드바이스를 적용할 메서드인지 확인
+}
+```
+
+
+
+이제 클래스 필터를 적용한 포인트컷을 작성해보자. 메서드 이름만 비교하던 `NameMatchMethodPointcut` 을 상속해서 프로퍼티로 주어진 이름 패턴을 갖고 클래스 이름을 비교하는 `ClassFilter` 를 추가하면 된다. 
+
+
+
+```java
+public class NameMatchClassMethodPointcut extends NameMatchMethodPointcut {
+
+    public void setMappedClassName(String mappedClassName) {
+        this.setClassFilter(new SimpleClassFilter(mappedClassName));
+    }
+
+    static class SimpleClassFilter implements ClassFilter {
+        String mappedName;
+        public SimpleClassFilter(String mappedName) {
+            this.mappedName = mappedName;
+        }
+
+        @Override
+        public boolean matches(Class<?> aClass) {
+            return PatternMatchUtils.simpleMatch(mappedName,
+                    aClass.getSimpleName());
+        }
+    }
+}
+```
+
+
+
+좀 더 편리한 포인트컷 작성 방법을 알아보자.
+
 
 
 
