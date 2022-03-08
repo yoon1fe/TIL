@@ -706,8 +706,6 @@ public void pointcutAdvisor() {
 
 ### 6.5 스프링 AOP
 
-### 6.5 스프링 AOP
-
 아직 부가 기능의 적용이 필요한 타겟 오브젝트마다 거의 비슷한 내용의 `ProxyFactoryBean` 빈 설정 정보를 추가해주어야 하는 문제가 있다. 프록시를 다이나믹하게 생성했던 것처럼, 반복적인 `ProxyFactoryBean` 설정 문제도 설정 자동 등록기법으로 해결하면 좋을 것 같다.
 
 
@@ -770,11 +768,83 @@ public class NameMatchClassMethodPointcut extends NameMatchMethodPointcut {
 
 
 
-좀 더 편리한 포인트컷 작성 방법을 알아보자.
+좀 더 편리한 포인트컷 작성 방법을 알아보자. 이때까지 사용한 포인트컷은 메서드의 이름과 클래스의 이름 패턴을 메서드 매처 오브젝트와 클래스 필터로 비교해서 선정했다. 단순히 이름을 비교하는 것이 전부였다. 리플렉션 API를 통해서 상세한 클래스의 정보를 알 수 있기 때문에 보다 더 복잡하고 세밀한 기준으로 클래스나 메서드를 선정할 수 있을 것 같다. 하지만 리플렉션 API는 코드 작성하기가 까다롭다. 
 
 
 
+스프링은 표현식 언어를 사용해서 포인트컷을 작성할 수 있도록 하는 방법을 제공한다. 이것을 포인트컷 표현식이라고 한다. 포인트컷 표현식을 지원하는 포인트컷을 적용하려면 `AspectJExpressionPointcut` 클래스를 사용하면 된다. 이 클래스는 클래스와 메서드의 선정 알고리즘을 포인트컷 표현식을 이용해 한 번에 지정할 수 있게 해준다. 스프링이 사용하는 포인트컷 표현식은 AspectJ라는 프레임워크에서 제공하는 것을 가져와 일부 문법을 확장해서 사용하는 것이다. 그래서 이를 AspectJ 포인트컷 표현식이라고도 한다.
 
+
+
+AspectJ 포인트컷 표현식은 포인트컷 지시자를 이용해 작성한다. 포인트컷 지시자 중 가장 대표적으로 사용되는 것은 `execution()` 이다. `[]` 괄호는 옵션 항목이기 때문에 생략 가능하고, `|` 은 OR 조건이다.
+
+`execution([접근제한자 패턴] 타입패턴 [타입패턴.]이름패턴 (타입패턴 | "..", ...) [throws 예외패턴])`
+
+
+
+복잡해 보이지만 리플렉션으로 클래스의 메서드 시그니처와 동일한 구조를 갖고 있다.
+
+``` java
+System.out.println(Target.class.getMethod("minus", int.class, int.class));
+
+>> public int springbook.learningtest.spring.pointcut.Target.minus(int,int) throws java.lang.RuntimeException
+```
+
+
+
+AspectJ 포인트컷 표현식을 테스트 해보는 코드는 다음과 같다.
+
+```java
+@Test
+public void methodSignaturePointcut() throws SecurityException, NoSuchMethodException {
+    AspectJExpressionPointcut pointcut = new AspectJExpressionPointcut();
+
+    pointcut.setExpression("execution(public int springbook.learningtest.spring.pointcut.Target.minus(int,int) throws java.lang.RuntimeException)");
+
+    // Target.minus()
+    assertThat(pointcut.getClassFilter().matches(Target.class) &&
+            pointcut.getMethodMatcher().matches(
+                    Target.class.getMethod("minus", int.class, int.class), null), is(true));
+    // Target.plus()
+    assertThat(pointcut.getClassFilter().matches(Target.class) &&
+            pointcut.getMethodMatcher().matches(
+                    Target.class.getMethod("plus", int.class, int.class), null), is(false));
+
+    // Bean.method()
+    assertThat(pointcut.getClassFilter().matches(Bean.class) &&
+            pointcut.getMethodMatcher().matches(
+                    Target.class.getMethod("method"), null), is(false));
+
+}
+```
+
+
+
+옵션 항목은 생략 가능하지만, 생략한 부분은 모든 경우를 허용하기 때문에 주의해야 한다. 또한, 파라미터의 개수와 타입을 무시하려면 괄호 안에 `..`  을 넣어준다.
+
+
+
+포인트컷 표현식의 클래스 이름에 적용되는 패턴은 클래스 이름 패턴이 아니라 타입 패턴이다. 한 서브 클래스의 슈퍼 클래스, 구현 인터페이스까지 세 가지 모두 적용된다.
+
+
+
+ 관심사가 같은 코드를 한 곳에 모으는 것은 소프트웨어 개발의 가장 기본이 되는 원칙이다. 객체지향 설계 원칙에 따라 관심사가 같은 코드를 분리하고,  서로 낮은 결합도를 가진 채로 독립적이고 유연하게 확장할 수 있는 모듈로 만들어 나가야 한다. 코드를 분리하거나 모으고, 인터페이스를 도입하고, DI를 통해 런타임 시에 의존관계를 만들어줌으로써 대부분의 문제를 해결할 수 있었지만, 트랜잭션 적용 코드는 위 방법으로 해결하기 어려웠다. 트랜잭션 경계 설정 기능은 다른 모듈의 코드에 부가적으로 부여되는 기능이었기 때문이다. 그래서 이를 해결하기 위해 다이나믹 프록시나 빈 후처리 기술이 필요했다.
+
+
+
+이러한 부가 기능 모듈을 객체지향 기술에서 주로 사용하는 오브젝트와는 다르게 **애스팩트(관점)** 이라고 부른다. 애스팩트란 그 자체로 애플리케이션의 핵심 기능을 담고 있진 않지만, 애플리케이션을 구성하는 중요한 요소이고, 핵심 기능에 부가되어 의미를 갖는 특별한 모듈을 말한다.
+
+
+
+애스펙트는 부가될 기능을 정의한 코드인 어드바이스와, 어드바이스를 어디에 적용할지를 결정하는 포인트컷을 갖고 있다. 애플리케이션의 핵심 기능에서 부가 기능을 분리해서 애스펙트라는 독특한 모듈로 만들어서 설계하고 개발하는 방법을 AOP(Aspect Oriented Programming)이라고 한다. 부가 기능이 핵심 기능 안으로 들어가 버리면 핵심 기능 설계에 객체 지향 기술의 가치를 온전히 부여하기가 힘들다. AOP는 애스펙트를 분리함으로써 핵심 기능을 설계하고 구현할 때 객체지향적인 가치를 지킬 수 있도록 도와준다.
+
+
+
+스프링 AOP는 프록시 방식의 AOP이다. 반면에 AspectJ는 스프링처럼 다이나믹 프록시 방식을 사용하지 않고, 타겟 오브젝트를 뜯어 고쳐서 부가 기능을 직접 넣어준다. 컴파일된 타겟의 클래스 파일 자체를 수정하거나 클래스가 JVM에 로딩되는 시점을 가로채서 바이트 코드를 조작하는 복잡한 방법을 사용한다. 
+
+
+
+조인 포인트란 어드바이스가 적용될 수 있는 위치를 말한다. 스프링의 프록시 AOP에서 조인 포인트는 메서드의 실행 단계뿐이다. 타겟 오브젝트가 구현한 인터페이스의 모든 메서드는 조인 포인트가 된다.
 
 
 
