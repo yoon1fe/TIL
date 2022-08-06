@@ -230,9 +230,83 @@ public class FrontControllerServletV4 extends HttpServlet {
 
 ## 유연한 컨트롤러1 - v5
 
+#### 어댑터 패턴
 
+지금까지 개발한 프론트 컨트롤러는 하나의 컨트롤러 인터페이스만 사용 가능하다. `ControllerV3`와 `ControllerV4`는 완전히 다른 인터페이스라서 호환이 불가능하다. 이때 사용하는 것이 바로 **어댑터**이다.
+
+
+
+`HandlerAdapter`: 핸들러(컨트롤러) 어댑터
+
+`Handler`: 컨트롤러와 동일
+
+
+
+```java
+package hello.servlet.web.frontcontroller.v5;
+
+import hello.servlet.web.frontcontroller.ModelView;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+
+public interface MyHandlerAdapter {
+
+  boolean supports(Object handler);
+
+  ModelView handle(HttpServletRequest request, HttpServletResponse response, Object handler) throws ServletException, IOException;
+}
+```
 
 
 
 ## 유연한 컨트롤러2 - v5
 
+```java
+package hello.servlet.web.frontcontroller.v5.adapter;
+
+import hello.servlet.web.frontcontroller.ModelView;
+import hello.servlet.web.frontcontroller.v4.ControllerV4;
+import hello.servlet.web.frontcontroller.v5.MyHandlerAdapter;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+public class ControllerV4HandlerAdapter implements MyHandlerAdapter {
+
+  @Override
+  public boolean supports(Object handler) {
+    return handler instanceof ControllerV4;
+  }
+
+  @Override
+  public ModelView handle(HttpServletRequest request, HttpServletResponse response, Object handler) throws ServletException, IOException {
+    ControllerV4 controller = (ControllerV4) handler;
+
+    Map<String, String> paramMap = createParamMap(request);
+    HashMap<String, Object> model = new HashMap<>();
+
+    String viewName = controller.process(paramMap, model);
+
+    ModelView mv = new ModelView(viewName);
+    mv.setModel(model);
+
+    return mv;
+  }
+
+  private static Map<String, String> createParamMap(HttpServletRequest request) {
+    Map<String, String> paramMap = new HashMap<>();
+    request.getParameterNames().asIterator()
+        .forEachRemaining(paramName -> paramMap.put(paramName, request.getParameter(paramName)));
+    return paramMap;
+  }
+}
+```
+
+
+
+어댑터를 통해서 V3에서는 ModelView로 반환하던 것을 V4에서는 viewName을 받아와서 어댑터에서 ModelView를 생성해서 반환해준다!
