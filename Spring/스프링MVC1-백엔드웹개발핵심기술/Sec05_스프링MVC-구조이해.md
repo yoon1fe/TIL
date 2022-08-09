@@ -177,23 +177,71 @@ protected void doDispatch (HttpServletRequest request, HttpServletResponse respo
 
 
 
-
-
-
-
-
-
 ## 스프링 MVC - 시작하기
 
+스프링이 제공하는 컨트롤러는 애너테이션 기반으로 동작해서 매우 유연하고 실용적이다.
 
+
+
+#### `RequestMapping`
+
+- `RequestMappingHandlerMapping`
+- `RequestMappingHandlerAdapter`
+
+
+
+```java
+package hello.servlet.web.springmvc.v1;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.servlet.ModelAndView;
+
+@Controller
+public class SpringMemberFormControllerV1 {
+
+  @RequestMapping("/springmvc/v1/members/new-form")
+  public ModelAndView process() {
+    return new ModelAndView("new-form");
+  }
+}
+```
+
+- `@Controller`
+  - 스프링이 자동으로 스플이 빈으로 등록한다.
+  - 스프링 MVC에서 애너테이션 기반 컨트롤러로 인식한다.
+- `@RequestMapping`
+  - 요청 정보를 매핑한다. 해당 URL이 호출되면 이 메서드가 호출된다. 애너테이션을 기반으로 동작하기 때문에 메서드의 이름은 임의로 지어도 된다.
+- `ModelAndView`: 모델과 뷰 정보를 담아서 반환한다.
+
+
+
+`RequestMappingHandlerMapping`은 스프링 빈 중에서 `@RequestMapping` 또는 `@Controller` 가 클래스 레벨에 붙어 있는 경우 매핑 정보로 인식한다.
 
 
 
 ## 스프링 MVC - 컨트롤러 통합
 
+`RequestMapping`가 메서드 단위에 적용되어 있는데, 클래스 단위에 적용하면 클래스를 유연하게 통합할 수 있다.
 
+
+
+클래스 레벨 매핑 + 메서드 레벨 매핑 가능!
 
 
 
 ## 스프링 MVC - 실용적인 방식
 
+스프링 MVC는 개발자가 편리하게 개발할 수 있도록 다양한 편의 기능을 제공한다.
+
+
+
+- ModelAndView 반환 대신 String 반환
+
+- `@RequestParam` 사용
+
+  스프링은 HTTP 요청 파라미터를 `@RequestParam` 으로 받을 수 있다. `@RequestParam("username")` 은 `request.getParameter("username")` 와 거의 같은 코드라 생각하면 된다. 물론 GET 쿼리 파라미터, POST Form 방식을 모두 지원한다.
+
+- `@RequestMapping` -> `@GetMapping`, `@PostMapping`
+
+  URL만 매칭하는 것이 아니라, HTTP Method도 함께 구분할 수 있다.
