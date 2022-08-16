@@ -108,11 +108,81 @@ logging.level.hello.springmvc=debug
 
 
 
-
-
 ## 요청 매핑
 
+- `@RestController`
 
+  - `@Controller`는 반환 값이 String이면 뷰 이름으로 인식된다. 그래서 뷰를 찾고 뷰가 렌더링된다.
+  - `@RestController`는 반환 값으로 뷰를 찾는 것이 아니라, **HTTP 메시지 바디에 바로 입력**한다.
+    - `@ResponseBody`가 붙어있다.
+  - `@RequestMapping("/hello-basic")`
+    - /hello-basic URL 호출이 오면 이 메서드가 실행되도록 매핑한다.
+    - 대부분의 속성을 배열로 제공하므로 다중 설정이 가능하다.
+
+- HTTP 메서드
+
+  - `@RequestMapping`에 `method` 속성으로 HTTP 메서드를 지정하지 않으면 HTTP 메서드와 무관하게 호출된다.
+  - 축약 애너테이션도 있다. HTTP 메서드를 축약한 애너테이션을 사용하는 것이 더 직관적이다.
+    - `@GetMapping`, `@PostMapping` 등등..
+
+- `@PathVariable`(경로 변수) 사용
+
+  - ``` java
+    /**
+     * PathVariable 사용
+     * 변수명이 같으면 생략 가능
+     * @PathVariable("userId") String userId -> @PathVariable userId
+     */
+    @GetMapping("/mapping/{userId}")
+    public String mappingPath(@PathVariable("userId") String data) {
+     log.info("mappingPath userId={}", data);
+     return "ok";
+    }
+    ```
+
+
+
+최근 HTTP API는 다음과 같이 리소스 경로에 식별자를 넣는 스타일을 선호한다.
+
+- `/mapping/userA`
+- `/users/1`
+
+
+
+`@RequestMapping`은 URL 경로를 템플릿화할 수 있는데, `@PathVariable`을 사용하면 매칭되는 부분을 편리하게 조회할 수 있다.
+
+
+
+- 특정 파라미터 조건 매핑
+
+  - 특정 파라미터가 있거나 없는 조건을 추가할 수 있다. 잘 쓰진 않는다..
+
+  - ``` java
+    /**
+     * 파라미터로 추가 매핑
+     * params="mode",
+     * params="!mode"
+     * params="mode=debug"
+     * params="mode!=debug" (! = )
+     * params = {"mode=debug","data=good"}
+     */
+    @GetMapping(value = "/mapping-param", params = "mode=debug")
+    public String mappingParam() {
+     log.info("mappingParam");
+     return "ok";
+    }
+    ```
+
+- 특정 헤더 조건 매핑
+  - `@GetMapping(value = "/mapping-header", headers = "mode=debug")`
+  - 파라미터 매핑과 비슷하지만, HTTP 헤더를 사용한다.
+- 미디어 타입 조건 매핑 
+  - HTTP 요청 Content-Type, consume
+    - `@PostMapping(value = "/mapping-consume", consumes = "application/json")`
+    - HTTP 요청의 Content-Type 헤더를 기반으로 미디어 타입으로 매핑한다. 만약 맞지 않으면 HTTP 415 상태 코드를 반환한다.
+  - HTTP 요청 Accept, produce
+    - `@PostMapping(value = "/mapping-produce", produces = "text/html")`
+    - Accept 헤더를 기반으로 미디어 타입으로 매핑한다. 맞지 않으면 406 상태 코드를 반환한다.
 
 
 
