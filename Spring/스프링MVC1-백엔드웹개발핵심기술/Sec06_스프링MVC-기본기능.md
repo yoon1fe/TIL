@@ -188,17 +188,69 @@ logging.level.hello.springmvc=debug
 
 ## 요청 매핑 - API 예시
 
+URL 예시
 
+- 회원 목록 조회: GET `/users `
+- 회원 등록: POST `/users `
+- 회원 조회: GET `/users/{userId} `
+- 회원 수정: PATCH `/users/{userId} `
+- 회원 삭제: DELETE `/users/{userId}`
+
+
+
+머 요래 한다.
 
 
 
 ## HTTP 요청 - 기본, 헤더 조회
 
+HTTP 헤더 정보를 조회하는 방법을 알아보자.
+
+- `@RequestHeader MultiValueMap<String, String> headerMap`
+  - 모든 HTTP 헤더를 MultiValueMap 형식으로 조회
+- `@RequestHeader("host") String host`
+  - 특정 HTTP 헤더를 조회
+- `@CookieValue(value="myCookie", required = false) String cookie `
+  - 특정 쿠키 조회
+
 
 
 ## HTTP 요청 파라미터 - 쿼리 파라미터, HTML Form
 
+클라이언트에서 서버로 요청 데이터를 전달할 때는 주로 다음 세 가지 방법을 사용한다.
 
+- GET - 쿼리 파라미터
+  - /url?username=hello&age=20
+  - 메시지 바디 없이, URL의 쿼리 파라미터에 데이터를 포함해서 전달 
+  - 예) 검색, 필터, 페이징등에서 많이 사용하는 방식
+- POST - HTML Form
+  - content-type: application/x-www-form-urlencoded 
+  - 메시지 바디에 쿼리 파리미터 형식으로 전달 `username=hello&age=20` 
+  - 예) 회원 가입, 상품 주문, HTML Form 사용
+- HTTP message body에 데이터를 직접 담아서 요청
+  - HTTP API에서 주로 사용, 
+  - JSON, XML, TEXT 데이터 형식은 주로 JSON 사용 
+  - POST, PUT, PATCH
+
+
+
+`HttpServletRequest`의 `request.getParameter()`를 사용하면 다음 두 가지 요청 파라미터를 조회할 수 있다.
+
+- GET - 쿼리 파라미터 전송
+
+  - `http://localhost:8080/request-param?username=hello&age=20`
+
+- POST - HTML Form 전송
+
+  - ``` http
+    POST /request-param ...
+    content-type: application/x-www-form-urlencoded
+    username=hello&age=20
+    ```
+
+
+
+GET 쿼리 파리미터 전송 방식이든, POST HTML Form 전송 방식이든 둘다 형식이 같으므로 구분없이 조회할 수 있다. 이것을 간단히 **요청 파라미터(request parameter)** 조회라 한다.
 
 
 
