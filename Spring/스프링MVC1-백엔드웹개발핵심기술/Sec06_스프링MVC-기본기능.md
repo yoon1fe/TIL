@@ -256,37 +256,196 @@ GET 쿼리 파리미터 전송 방식이든, POST HTML Form 전송 방식이든 
 
 ## HTTP 요청 파라미터 - @RequestParam
 
+스프링이 제공하는 `@RequestParam`을 사용하면 요청 파라미터를 매우 편리하게 사용할 수 있다.
 
+
+
+- `@RequestParam`: 파라미터 이름으로 바인딩. 
+
+  - `name` 속성이 파라미터 이름으로 사용된다.
+
+  - `@RequestParam("username") String memberName` -> `request.getParameter("username")`
+  - HTTP 파라미터 이름이 변수 이름과 같으면 `name` 생략 가능
+  - String, int, Integer 등의 단순 타입이면 `@RequestParam` 도 생략 가능하다. 하지만 완전히 생략하는 것은 과하다는 생각도 든다. 해당 애너테이션이 있으면 명확하게 요청 파라미터에서 데이터를 읽는 다는 것을 알 수 있다.
+  - `required` 속성이 true(default)라면 이 값이 꼭 들어와야 한다. 없으면 400(Bad Request) 예외가 발생한다.
+  - false 인 파라미터가 만약 기본형(int같은..)이라면 500 에러가 난다. 기본형에는 `null`값이 들어갈 수 없기 때문!!
+  - `defaultValue` 속성으로 디폴트 값을 넣어줄 수도 있다.
+  - 파라미터를 Map, MultiValueMap으로 조회할 수도 있다.
+
+- `ResponseBody`: View 조회를 무시하고 HTTP message body에 직접 해당 내용 입력
 
 
 
 ## HTTP 요청 파라미터 - @ModelAttribute
 
+보통 개발을 할 때 요청 파라미터를 받아서 필요한 객체를 만들고 그 객체에 값을 넣어준다. 스프링은 이 과정을 완전히 자동화해주는 `@ModelAttribute` 기능을 제공한다.
 
+
+
+``` java
+@ResponseBody
+@RequestMapping("/model-attribute-v1")
+public String modelAttributeV1(@ModelAttribute HelloData helloData) {
+ log.info("username={}, age={}", helloData.getUsername(),
+helloData.getAge());
+ return "ok";
+}
+```
+
+
+
+스프링 MVC는 `@ModelAttribute`가 있으면 다음과 같이 실행된다.
+
+1. `HelloData` 객체를 생성한다.
+2. 요청 파라미터의 이름으로 `HelloData` 객체의 프로퍼티를 찾는다. 그리고 해당 프로퍼티의 setter를 호출해서 파라미터의 값을 입력(바인딩)한다.
+
+
+
+만약 숫자가 들어가야 할 곳에 문자를 넣으면 `BindException`이 발생한다.
+
+
+
+`@ModelAttribute`는 생략 가능하다.
+
+스프링은 해당 생략 시 다음과 같은 규칙을 적용한다.
+
+- String, int, Integer같은 단순 타입 = `@RequestParam`
+- 나머지 = `@ModelAttribute`(argument resolver로 지정해둔 타입 외)
 
 
 
 ## HTTP 요청 메시지 - 단순 텍스트
 
+요청 파라미터(query string)와는 다르게, HTTP 메시지 바디를 통해 데이터가 직접 넘어오는 경우에는 `@RequestParam`, `@ModelAttribute`를 사용할 수 없다. 그럼 어떻게 갖고 올 수 있을까??
 
+
+
+- HTTP 메시지 바디의 데이터는 `InputStream`을 사용해서 직접 읽을 수 있다.
+
+
+
+스프링 MVC는 다음 파라미터를 지원한다.
+
+- `InputStream(Reader)`: HTTP 요청 메시지 바디의 내용을 직접 조회
+- `OutputStream(Writer)`: HTTP 응답 메시지의 바디에 직접 결과 출력
+- `HttpEntity`: HTTP header, body 정보를 편리하게 조회
+  - 메시지 바디 정보를 직접 조회
+  - 요청 파라미터를 조회하는 기능과 관련없다.
+  - 응답에도 사용 가능하다.
+    - 메시지 바디 정보 직접 반환
+    - 헤더 정보 포함 가능
+    - view 조회 X
+
+
+
+`HttpEntity`를 상속받은 다음 객체들도 같은 기능을 제공한다.
+
+- `RequestEntity` - HttpMethod, url 정보 추가됨
+- `ResponseEntity` - HTTP 상태 코드 설정 가능
+
+
+
+스프링 MVC 내부에서 HTTP 메시지 바디를 읽어서 문자나 객체로 변환해서 전다해주는데, 이때 HTTP 메시지 컨버터`HttpMessageConverter`라는 기능을 사용한다.
+
+
+
+`@RequestBody`
+
+- HTTP 메시지 바디 정보를 편리하게 조회할 수 있다.
+
+`@ResponseBody`
+
+- 응답 결과를 HTTP 메시지 바디에 직접 담아서 전달할 수 있다.
 
 
 
 ## HTTP 요청 메시지 - JSON
 
+보통 JSON 데이터를 `ObjectMapper`를 통해 자바 객체로 변환한다. 근데 `@ModelAttribute`처럼 한 번에 객체로 변환하고 싶다!!
 
+- `@RequestBody` 객체 파라미터
+  - `@RequestBody HelloData data`
+  - -> 직접 객체 지정
+  - HTTP 메시지 컨버터가 JSON도 객체로 변환해준다.
+  - 얘는 생략 불가능하다. `HelloData`인 경우 아무것도 명시해주지 않으면 `@ModelAttribute`가 적용되기 때문에 HTTP 메시지 바디가 아니라 요청 파라미터를 처리하게 된다!
+
+참고로!! HTTP 요청 시에 `content-type`이 `application/json`인지 꼭 확인해야 한다. 그래야 JSON을 처리할 수 있는 HTTP 메시지 컨버터가 실행된다.
+
+
+
+- `@RequestBody` 요청
+  - JSON 요청 -> HTTP 메시지 컨버터 -> 객체
+- `@ResponseBody` 응답
+  - 객체 -> HTTP 메시지 컨버터 -> JSON 응답
 
 
 
 ## 응답 - 정적 리소스, 뷰 템플릿
 
+스프링에서 응답 데이터를 만드는 방법은 크게 세 가지이다.
 
+- 정적 리소스
+  - 웹 브라우저에 정적인 HTML, css, js를 제공할 때는 **정적 리소스**를 사용한다.
+- 뷰 템플릿
+  - 웹 브라우저에 동적인 HTML을 제공할 때는 뷰 템블릿을 사용한다.
+- HTTP 메시지 사용
+  - HTTP API를 제공하는 경우에는 HTML이 아니라 데이터를 전달해야 하므로, HTTP 메시지 바디에 JSON같은 형식으로 데이터를 실어 보낸다.
+
+
+
+#### 정적 리소스
+
+스프링 부트는 classpath의 다음 디렉토리에 있는 정적 리소스를 제공한다.
+
+- /static, /public, /resources, /META-INF/resources
+- 정적 리소스는 해당 파일을 변경없이 그대로 서비스하는 것이다.
+
+
+
+#### 뷰 템플릿
+
+뷰 템플릿을 거쳐서 HTML이 생성되고, 뷰가 응답을 만들어서 전달한다. 일반적으로 HTML을 동적으로 생성하는 용도로 사용하지만, 다른 것들도 가능하다.
+
+스프링 부트는 기본 뷰 템플릿 경로를 제공한다.
+
+- `src/main/resources/templates`
+
+
+
+#### String을 반환하는 경우 - View or HTTP 메시지
+
+`@ResponseBody` 가 없으면 `response/hello` 로 뷰 리졸버가 실행되어서 뷰를 찾고, 렌더링 한다. `@ResponseBody` 가 있으면 뷰 리졸버를 실행하지 않고, HTTP 메시지 바디에 직접 `response/hello` 라는 문자가 입력된다.
+
+
+
+#### Void를 반환하는 경우
+
+`@Controller` 를 사용하고, `HttpServletResponse` , `OutputStream(Writer)` 같은 HTTP 메시지 바디를 처리하는 파라미터가 없으면 요청 URL을 참고해서 논리 뷰 이름으로 사용한다.
+
+- 참고로 이 방식은 명시성이 너무 떨어지고 이렇게 딱 맞는 경우도 없어서 권장하지 않는다.
+
+
+
+#### HTTP 메시지
+
+`@ResponseBody`, `HttpEntity` 를 사용하면, 뷰 템플릿을 사용하는 것이 아니라, HTTP 메시지 바디에 직접 응답 데이터를 출력할 수 있다.
+
+
+
+### Thymeleaf 스프링 부트 설정
+
+thymeleaf 라이브러리를 추가하면 스프링 부트가 자동으로 `ThymeleafViewResolver`와 필요한 스프링 빈들을 등록한다. 추가로 `application.properties` 에 다음과 같은 설정값이 추가된다.
+
+``` properties
+spring.thymeleaf.prefix=classpath:/templates/
+spring.thymeleaf.suffix=.html
+```
 
 
 
 ## HTTP 응답 - HTTP API, 메시지 바디에 직접 입력
 
-
+HTTP API를 제공하는 경우에는 HTML이 아니라 데이터를 전달해야 하므로, HTTP 메시지 바디에 JSON 같은 형식으로 데이터를 실어 보낸다.
 
 
 
