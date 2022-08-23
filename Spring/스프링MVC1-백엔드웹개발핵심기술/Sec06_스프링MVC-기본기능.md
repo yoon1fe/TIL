@@ -451,7 +451,52 @@ HTTP API를 제공하는 경우에는 HTML이 아니라 데이터를 전달해�
 
 ## HTTP 메시지 컨버터
 
+뷰 템플릿으로 HTML을 생성해서 응답하는 것이 아니라, HTTP API처럼 JSON 데이터를 HTTP 메시지 바디에서 직접 읽거나 쓰는 경우 HTTP 메시지 컨버터를 사용하면 편리하다.
 
+
+
+- `@ResponseBody`를 사용하면
+  - HTTP의 body에 문자 내용을 직접 반환한다.
+  - `viewResolver` 대신 `HttpMessageConverter`가 동작한다.
+  - 기본 문자 처리: `StringHttpMessageConverter`
+  - 기본 객체 처리: `MappingJackson2HttpMessageConverter`
+  - byte 처리 등 기타 여러 HttpMessageConverter가 기본으로 등록되어 있다.
+
+
+
+**스프링 MVC는 다음의 경우에 HTTP 메시지 컨버터를 적용한다.**
+
+- HTTP 요청: `@RequestBody`, `HttpEntity(RequestEntity)`
+- HTTP 응답: `@ResponseBody`, `HttpEntity(ResponseEntity)`
+
+
+
+`HttpMessageConverter`는 HTTP 요청/응답시에 사용된다.
+
+- `canRead()`, `canWrite()`:메시지 컨버터가 해당 클래스, 미디어 타입(content-type)을 지원하는지 체크
+- `read()`, `write()`: 메시지 컨버터를 통해서 메시지를 읽고 쓰는 기능
+
+
+
+#### 스프링 부트 기본 메시지 컨버터
+
+1. `ByteArrayHttpMessageConverter``
+2. ``StringHttpMessageConverter`
+3. MappingJackson2HttpMessageConverter`
+
+
+
+#### HTTP 요청 데이터 읽기
+
+- HTTP 요청이 오고, 컨트롤러에서 `@RequestBody`, `HttpEntity` 파라미터를 사용한다면
+- 메시지 컨버터가 메시지를 읽을 수 있는지 확인하기 위해 `canRead()`를 호출한다.
+- 조건 만족하면 `read()`를 호출해서 객체 생성, 반환한다.
+
+
+
+응답 데이터는 반대~
+
+- `canWrite()` 에서 HTTP 요청의 Accept 미디어 타입을 지원하는지 체크한다. (더 정확히는 `@ResponseMapping`의 `produces`)
 
 
 
