@@ -480,9 +480,9 @@ HTTP API를 제공하는 경우에는 HTML이 아니라 데이터를 전달해�
 
 #### 스프링 부트 기본 메시지 컨버터
 
-1. `ByteArrayHttpMessageConverter``
-2. ``StringHttpMessageConverter`
-3. MappingJackson2HttpMessageConverter`
+1. `ByteArrayHttpMessageConverter`
+2. `StringHttpMessageConverter`
+3. `MappingJackson2HttpMessageConverter`
 
 
 
@@ -502,7 +502,58 @@ HTTP API를 제공하는 경우에는 HTML이 아니라 데이터를 전달해�
 
 ## 요청 매핑 핸들러 어댑터 구조
 
+HTTP 메시지 컨버터는 스프링 MVC 어디서 동작할까? -> 애너테이션 기반의 컨트롤러(`@RequestMapping`)을 처리하는 핸들러 어댑터인 `RequestMappingHandlerAdapter`
 
 
 
+### `RequestMappingHandlerAdapter` 동작 방식
+
+![요청 매핑 핸들러 어댑터 구조](https://velog.velcdn.com/images%2Fhyun6ik%2Fpost%2F5bc4748e-d499-43f0-afda-e6dc86fb2ee8%2Fimage.png)
+
+
+
+#### ArgumentResolver(`HandlerMethodArgumentResolver`)
+
+애너테이션 기반의 컨트롤러는 `ArgumentResolver` 덕분에 매우 다양한 파라미터를 사용할 수 있다. 
+
+애너테이션 기반 컨트롤러를 처리하ㅇ는 `RequestMappingHandlerAdapter`는 `ArgumentResolver`를 호출해서 컨트롤러(핸들러)가 필요로 하는 다양한 파라미터의 값(객체)을 생성한다. 그리고 이렇게 파라미터의 값이 모두 준비되면 컨트롤러를 호출하면서 값을 넘겨준다.
+
+
+
+#### 동작 방식
+
+`ArgumentResolver`의 `supportsParameter()`를 호출해서 해달 파라미터를 지원하는지 체크하고, 지원하면 `resolveArgument()`를 호출해서 실제 객체를 생성한다. 그리고 이렇게 생성된 객체가 컨트롤러 호출 시 넘어간다.
+
+
+
+#### ReturnValueHandler(`HandlerMethodReturnValueHandler`)
+
+응답 값을 변환하고 처리해주는 애다.
+
+컨트롤러에서 String으로 뷰 이름을 반환해도 동작하는 이유가 바로 얘 덕분이다.
+
+
+
+### HTTP 메시지 컨버터
+
+얘는 그럼 어딨을까?? `ArgumentResolver`가 사용한다.
+
+![img](https://velog.velcdn.com/images%2Fhyun6ik%2Fpost%2Fcfc7fe79-1e51-4975-ad04-f893599a9ad1%2Fimage.png)
+
+- `ArgumentResolver` 의 `resolveArgument` 메서드에서 반환할 객체를 생성할 때
+  - `Object body = readWithMessageConverters(webRequest, parameter, paramType);`
+
+
+
+#### 확장
+
+스프링은 다음을 모두 인터페이스로 제공하기 때문에 필요하다면 기능을 확장할 수 있다.
+
+- `HandlerMethodArgumentResolver`
+- `HandlerMethodReturnValueHandler`
+- `HttpMessageConverter`
+
+
+
+근데 스프링이 필요한 대부분의 기능을 제공하기 때문에 실제로 기능 확장할 일이 많진 않다. 기능 확장은 `WebMvcConfigurer`를 상속받아서 스프링 빈으로 등록하면 된다.
 
