@@ -1,0 +1,383 @@
+# PART 1 기초
+
+
+
+## CHAPTER 1. 자바 8~11: 뭔일 일어나고 있?
+
+자바 8에서 제공하는 새로운 기술
+
+- 스트림 API
+- 메서드에 코드를 전달하는 기법
+  - 이를 이용하면 간결한 방식으로 동작 파라미터화`behavior parameterization`을 구현할 수 있다.
+- 인터페이스의 디폴트 메서드
+
+
+
+자바 8 설계의 밑바탕을 이루는 세 가지 프로그래밍 개념
+
+#### 스트림 처리
+
+스트림이란?
+
+- 한 번에 한 개씩 만들어지는 연속적인 데이터 항목들의 모임
+- 자바 8에는 `java.util.stream` 패키지에 스트림 API가 추가됐다.
+- 핵심은 기존에 한 번에 한 항목을 처리하던 작업을 데이터베이스 질의처럼 고수준으로 추상화해서 일련의 스트림으로 만들어 처리할 수 있다는 것 + 스레드를 사용하지 않고도 병렬성을 얻을 수도 있다.
+
+
+
+#### 동작 파라미터화로 메서드에 코드 전달하기
+
+코드 일부를 API로 전달하는 기능.
+
+메서드를 다른 메서드로 전달하는 것 -> 동작 파라미터화
+
+customerId로 정렬하고 싶다 -> `compareUsingCustomerId()` 메서드를 이용해 `sort`의 동작을 파라미터화
+
+연산의 동작을 파라미터화할 수 있는 코드를 전달
+
+
+
+#### 병렬성과 공유 가변 데이터
+
+병렬성을 공짜로 얻을 수 있다. 대신 스트림 메서드로 전달하는 코드의 동작 방식을 수정해야 한다.
+
+다른 코드와 동시에 실행하더라도 **안전하게 실행**할 수 있는 코드를 만들려면 공유된 가변 데이터에 접근하지 않아야 한다. 이를 순수(pure) 함수, 부작용 없는(side-effect-free) 함수, 상태없는(stateless) 함수라고 부른다.
+
+
+
+### 자바 함수
+
+프로그래밍 언어의 핵심은 값을 바꾸는 것이다. 
+
+일급 시민
+
+- `int`, `double`과 같은 기본 자료형, 객체(의 참조), 배열 등
+- 
+
+
+
+메서드나 클래스같은 구조체는 값의 구조를 표현하는데 도움을 주지만, 전달할 수 없는 구조체는 이급 시민
+
+- 메서드, 클래스 등
+- 그 자체로 값이 될 수 없다.
+- 이급 시민을 일급 시민으로 만들면, 프로그래밍에 유용하게 활용 가능
+
+
+
+#### 메서드 참조(`::`)
+
+- 디렉터리에서 모든 숨겨진 파일을 필터링하는 코드
+
+  ``` java
+  File[] hiddenFiles = new File(".").listFiles(new FilFilter() {
+    public boolean accept(File file) {
+      return file.isHidden();		// 숨겨진 파일 필터링
+    }
+  });
+  ```
+
+  - `File` 클래스에 이미 `isHidden()` 메서드가 있는데 `FileFilter`로 `isHidden()`을 감싼 다음 `FileFilter`를 인스턴스화? 복잡하다.
+
+- 메서드 참조를 이용한 코드
+
+  ``` java
+  File[] hiddenFiles = new File(".").listFiles(File::isHidden);
+  ```
+
+  - `File` 클래스에 있는 `isHidden()` 메서드를 참조해서 갖다 써라~
+  - 이처럼 자바 8의 코드는 이전에 비해 문제 자체를 더 직접적으로 설명한다.
+
+
+
+위 코드에서 메서드가 이급값이 아닌 일급값으로 사용된다. 기존의 `new`로 객체 참조를 생성해 객체 참조를 이용하지 않음
+
+
+
+#### 람다 : 익명 함수
+
+자바 8에서는 람다(익명 함수)를 포함하여함수도 값으로 취급 가능.
+
+
+
+#### 코드 넘겨주기
+
+- `Apple` 리스트에서 녹색 사과만 필터링하는 메서드
+
+  ``` java
+  public static List<Apple> filterGreenApples(List<Apple> inventory) {
+    List<Apple> result = new ArrayList<>();
+    
+    for (Apple apple : inventory) {
+      if (GREEN.equals(apple.getColor())) {	// <--
+        result.add(apple);
+      }
+    } 
+    return result;
+  }
+  ```
+
+- 사과 무게로 필터링하는 메서드
+
+  ``` java
+  public static List<Apple> filterHeavyApples(List<Apple> inventory) {
+    List<Apple> result = new ArrayList<>();
+    
+    for (Apple apple : inventory) {
+      if (apple.getWeight() > 150) {	// <--
+        result.add(apple);
+      }
+    } 
+    return result;
+  }
+  ```
+
+
+
+두 메서드는 딱 한 줄만 같다. 자바 8에서는 코드를 인수로 넘길 수 있으므로 위의 코드를 다음과 같이 구현 가능
+
+
+
+``` java
+// 녹색 사과 필터링
+public static boolean isGreenApple(Apple apple) {
+  return GREEN.equals(apple.getColor());
+}
+
+// 무게 필터링
+public static boolean isHeavyApple(Apple apple) {
+  return apple.getWeight() > 150;
+}
+
+public interface Predicate<T> {
+  boolean test(T t);
+}
+
+static List<Apple> filterApples(List<Apple> inventory, Predicate<Apple> p) {
+  List<Apple> result = new ArrayList<>();
+  for (Apple apple : inventory) {
+    if (p.test(apple)) {
+      result.add(apple);
+    }
+  }
+  return result;
+}
+
+
+// 메서드 호출
+filterApples(inventory, Apple::isGreenApple);
+filterApples(inventory, Apple::isHeavyApple);
+```
+
+
+
+> 참고: predicate
+>
+> 수학에서 인수로 값을 받아 `true`/`false` 반환하는 함수를 프레디케이트라고 한다. 이처럼 사용하는 것이 표준적인 방식!
+
+
+
+#### 메서드 전달 -> 람다로 변경
+
+자바 8에서는 `isHeavyApple`, `isGreenApple`과 같이 한두 번만 사용할 메서드를 매번 정의하지 않고, 람다라는 개념을 이용해 간단히 구현 가능하다.
+
+`filterApples(inventory, (Apple a) -> GREEN.equals(a.getColor()));`
+
+
+
+단, 람다가 꽤 복잡하다면 익명 람다보다 메서드를 정의하고 메서드 참조를 활용하는 것이 바람직하다. **코드의 명확성이 우선시되어야 하기 때문**
+
+
+
+### 스트림
+
+- 리스트에서 고가의 트랜잭션만 필터링한 다음, 통화로 결과를 그룹화하는 코드
+
+  ``` java
+  Map<Currency, List<Transaction>> transactionsByCurrencies = new HashMap<>();
+  
+  for (Transaction t : transactions) {
+    if (t.getPrice() > 1000) {
+      Currency c = t.getCurrency();
+      List<Transaction> transactionsForCurrency = transactionsByCurrencies.get(currency);
+      
+      if (transactionsForCurrency == null) {
+        transactionsForCurrency = new ArrayList<>();
+        transactionsForCurrencies.put(c, transactionsForCurrency);
+      }
+      
+      transactionsForCurrency.add(t);
+    }
+  }
+  ```
+
+  - 중첩된 제어 흐름 문장이 많아서 코드 이해가 어렵다
+
+- 스트림 API를 이용한 코드
+
+  ``` java
+  Map<Currency, List<Transaction>> transactionsByCurrencies = transactions.stream()
+    .filter((Transaction t) -> t.getPrice() > 1000)	// 고가의 트랜잭션 필터링
+    .collect(groupingBy(Transaction::getCurrency));	// 통화로 그루핑
+  ```
+
+
+
+
+- 컬렉션 API에서는 반복 과정을 직접 처리해야 한다.(for-each 루프 이용해서, 이를 외부 반복이라고 함)
+- 스트림 API를 이용하면 루프를 신경쓸 필요없다. 라이브러리 내부에서 모든 데이터가 처리된다.(내부 반복) + 멀티 코어 활용 가능
+
+
+
+스트림을 이용하면 병렬성을 공짜로 얻을 수 있다. 그래서 컬렉션을 필터링하는 가장 빠른 방법은 
+
+1. 컬렉션을 스트림으로 바꾸고
+2. 병렬로 처리한 다음
+3. 리스트로 다시 복원
+
+하는 것이다.
+
+
+
+### 디폴트 메서드와 자바 모듈
+
+인터페이스의 디폴트 메서드
+
+- 인터페이스를 **쉽게 바꿀 수 있도록 도와준다.** 
+- 구현 클래스에서 구현하지 않아도 되는 메서드를 인터페이스에 추가하기 때문에 기존 코드를 건드리지 않고도 원래의 인터페이스 설계를 자유롭게 확장 가능
+
+
+
+### 함수형 프로그래밍에서 가져온 다른 유용한 아이디어
+
+`Optional<T>` 클래스
+
+- 값을 갖거나 갖이 않을 수 있는 컨테이너 객체
+- 값이 없는 상황을 어떻게 처리할지 명시적으로 구현하는 메서드를 포함
+
+- `NPE` 피할 수 있게 해줌
+
+
+
+## CHAPTER 2. 동작 파라미터화 코드 전달
+
+#### 동작 파라미터화
+
+- 아직은 어떻게 실행할 지 결정하지 않은 코드 블록
+  - 나중에 실행된 메서드의 인수로 코드 블록 전달하면 나중에 프로그램에서 호출된다. -> 코드 블록에 따라 메서드의 **동작이 파라미터화된다.**
+- 자주 바뀌는 요구사항에 대해 효과적으로 대응 가능
+
+
+
+### 변화하는 요구사항에 대응하기
+
+농장 재고목록 리스트에서 녹색 사과만 필터링하는 코드
+
+``` java
+public static List<Apple> filterGreenApples(List<Apple> inventory) {
+  List<Apple> result = new ArrayList<>();
+  for (Apple apple : inventory) {
+    if (GREEN.equals(apple.getColor())) {
+      result.add(apple);
+    }
+  }
+  return result;
+}
+```
+
+
+
+빨간 사과도 필터링하고 싶다면? -> 색을 파라미터화하면 된다
+
+``` java
+public static List<Apple> filterApplesByColor(List<Apple> inventory, Color color) {
+  List<Apple> result = new ArrayList<>();
+  for (Apple apple : inventory) {
+    if (apple.getColor().equals(color)) {
+      result.add(apple);
+    }
+  }
+  return result;
+}
+```
+
+
+
+그럼 , 무게로 필터링하고 싶다면?!?!?!
+
+``` java
+public static List<Apple> filterApplesByWeight(List<Apple> inventory, int weight) {
+  List<Apple> result = new ArrayList<>();
+  for (Apple apple: inventory) {
+    if ( apple.getWeight() > weight ) {
+      result.add(apple);
+    }
+  }
+  return result;
+}
+```
+
+
+
+색깔/무게로 필터링하는 코드의 대부분이 중복된다. 이는 소프트웨어 공학의 DRY(같은 것을 반복하지 말 것) 원칙을 어기는 것이다.
+
+색/무게를 `filter`라는 메서드 하나로 합치는 방법도 있지만 좋지 않다. 특히 어떤 것을 기준으로 할지 가리키는 플래그를 사용하는 방법은 절대 사용하면 안된다.
+
+
+
+### 동작 파라미터화
+
+무식하게 파라미터를 하나하나 추가하지 말고 요구사항 변경에 대해 좀 더 유연하게 대응하는 방법을 알아보자.
+
+- 사과의 특정 속성에 대해 불리언값을 반환하는 방법
+
+  - 참/거짓을 반환하는 함수: predicate
+
+  - 선택 조건 결정하는 인터페이스
+
+    ``` java
+    public interface ApplePredicate {
+      boolean test (Apple apple);
+    }
+    ```
+
+
+
+- 무거운 사과만 선택하는 Predicate 함수
+
+``` java
+public class AppleHeavyWeightPredicate implements ApplePredicate {
+  public boolean test(Apple apple) {
+    return apple.getWeight() > 150;
+  }
+}
+```
+
+- 녹색 사과만 선택하는 Predicate 함수
+
+``` java
+public class AppleGreenColorPredicate implements ApplePredicate {
+  public boolean test(Apple apple) {
+    return GREEN.equals(apple.getColor());
+  }
+}
+```
+
+
+
+이러한 방식이 바로 전략 디자인 패턴이다.
+
+- 각 알고리즘을 캡슐화하는 알고리즘 패밀리를 정의한 다음, 런타임에 알고리즘을 선택하는 기법
+
+
+
+
+
+
+
+
+
+
+
+
+
+## CHAPTER 3. 람다 표현식
