@@ -366,17 +366,74 @@ public class AppleGreenColorPredicate implements ApplePredicate {
 
 이러한 방식이 바로 전략 디자인 패턴이다.
 
-- 각 알고리즘을 캡슐화하는 알고리즘 패밀리를 정의한 다음, 런타임에 알고리즘을 선택하는 기법
+- (전략이라 불리는) 각 알고리즘을 캡슐화하는 알고리즘 패밀리를 정의한 다음, **런타임**에 알고리즘을 선택하는 기법
+  - 여기선 `ApplePredicate`가 알고리즘 패밀리고, `AppleHeavyWeightPredicate` 등등이 전략이 된다
 
 
 
+이제 `filterApples` 메서드에서 `ApplePredicate` 객체를 받아와서 사과의 조건을 검사하면 된다.
+
+- 동작 파라미터화: 메서드가 다양한 동작을 **받아서** 내부적으로 다양한 동작을 수행
+
+``` java
+public static List<Apple> filterApples(List<Apple> inventory, ApplePredicate p) {
+  List<Apple> result = new ArrayList<>();
+  for (Apple apple : inventory) {
+    if (p.test(apple)) {
+      result.add(apple);
+    }
+  }
+  return result;
+}
+```
+
+이제 우리가 만들어서 전달한 `ApplePredicate` 객체에 의해 `filterApples` 메서드의 동작이 결정된다!! -> **동작 파라미터화!!**
 
 
 
+### 복잡한 과정 간소화
+
+근데 여러 클래스를 구현해서 인터페이스화하는 과정이 좀 귀찮다.
+
+**익명 클래스**: 클래스의 선언과 인스턴스화를 동시에 처리 -> 즉석에서 필요한 구현을 만들어서 사용
 
 
 
+``` java
+List<Apple> redApples = filterApples(inventory, new ApplePredicate() {
+  public boolean test(Apple apple) {
+    return RED.equals(apple.getColor());
+  }
+});
+```
 
+
+
+그래도 길다. 자바8부터 람다 표현식을 사용하면 획기적으로 짧게 줄일 수 있다.
+
+``` java
+List<Apple> result = filterApples(inventory, (Apple apple) -> RED.equals(apple.getColor()));
+```
+
+
+
+리스트 형식으로 추상화
+
+``` java
+public interface Predicate<T> {
+  boolean test(T t);
+}
+
+public static <T> List<T> filter(List<T> list, Predicate<T> p) {
+  List<T> result = new ArrayList<T>;
+  for (T e : list) {
+    if (p.test(e)) {
+      result.add(e);
+    }
+  }
+  return result;
+}
+```
 
 
 
