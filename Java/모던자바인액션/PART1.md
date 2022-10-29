@@ -438,3 +438,181 @@ public static <T> List<T> filter(List<T> list, Predicate<T> p) {
 
 
 ## CHAPTER 3. 람다 표현식
+
+람다 표현식: 메서드로 전달할 수 있는 익명 함수를 단순화한 것
+
+- 특징: 익명, 함수, 전달, 간결성
+
+람다를 이용하면 간결한 방식으로 코드 전달 가능
+
+
+
+``` java
+(Apple a1, Apple a2) -> a1.getWeight().compareTo(a2.getWeight());
+```
+
+- 파라미터 리스트 `(Apple a1, Apple a2)` (`Comparator`의 `compare` 메서드 파라미터 (사과 두 개))
+- 화살표
+- 람다 바디 `a1.getWeight().compareTo(a2.getWeight()`
+
+
+
+예제..
+
+- `List<String> list -> list.isEmpty()`
+- `() -> new Apple(10)`
+- `(Apple a) -> { System.out.println(a.getWeight());}` // 중괄호 생략 가능. 한 개의 `void` 메서드 호출은 중괄호로 감쌀 필요 X
+- `(String s) -> s.length()`
+- `(int a, int b) -> a * b `
+
+
+
+람다 표현식은 **함수형 인터페이스**에서 사용할 수 있다.
+
+- 함수형 인터페이스: 오직 하나의 추상 메서드만 지정하는 인터페이스 (`Comparator`, `Runnable`, `Predicate<T>` 등...)
+- 람다로 함수형 인터페이스의 추상 메서드 구현을 직접 할 수 있으므로 **전체 표현식을 함수형 인터페이스의 인스턴스**로 취급 가능
+
+
+
+함수 디스크립터: 람다 표현식의 시그니처를 서술하는 메서드
+
+
+
+- `@FunctionalInterface`: 함수형 인터페이스임을 명시하는 어노테이션. 추상 메서드가 두 개 이상이라면 컴파일 에러 발생
+
+
+
+### 함수형 인터페이스 사용
+
+#### `Predicate`
+
+- 추상 메서드 `test`: 제네릭 `T` 받아서 불리언 반환
+
+- ex
+
+  ``` java
+  @FunctionalInterface
+  public interface Predicate<T> {
+    boolean test(T t);
+  }
+  
+  public <T> List<T> filter(List<T> list, Predicate<T> p) {
+    List<T> results = new ArrayList<>();
+    for (T t : list) {
+      if (p.test(t)) {
+        results.add(t);
+      }
+    }
+    return results;
+  }
+  
+  Predicate<String> nonEmptyStringPredicate = (String s) -> !s.isEmpty();
+  List<String> nonEmpty = filter(listOfStrings, nonEmptyStringPredicate);
+  ```
+
+
+
+#### `Consumer`
+
+- `accept`: `T` 받아서 `void` 반환. `T` 객체를 인수로 받아서 특정 동작을 수행할 때 사용
+
+- ex
+
+  ``` java
+  @FunctionalInterface
+  public interface Consumer<T> {
+    void accept(T t);
+  }
+  
+  public <T> void forEach(List<T> list, Consumer<T> c) {
+    for (T t : list) {
+      c.accept(t);
+    }
+  }
+  
+  forEach(
+  	Arrays.asList(1, 2, 3, 4, 5), (Integer i) -> System.out.println(i)
+  );
+  ```
+
+
+
+#### `Function`
+
+- `apply`: `T` 받아서 제네릭 `R` 객체 반환. 입력 -> 출력 매핑
+
+- ex
+
+  ``` java
+  @FunctionalInterface
+  public interface Function<T, R> {
+    R apply(T t);
+  }
+  
+  public <T, R> List<R> map(List<T> list, Function<T, R> f) {
+    List<R> result = new ArrayList<>();
+    for (T t : list) {
+      result.add(f.apple(t));
+    }
+    return result;
+  }
+  
+  List<Integer> l = map(
+  	Arrays.asList("lambdas", "in", "action"),
+    (String s) -> s.length()
+  );
+  ```
+
+
+
+함수형 인터페이스는 확인된 예외를 던지는 것을 허용하지 않는다. 예외를 던지는 람다를 만들려면 확인된 예외를 선언하는 함수형 인터페이스를 직접 정의하거나, 람다를 `try/catch` 블록으로 감싸야 한다.
+
+
+
+#### 형식 추론
+
+- 자바 컴파일러는 람다 표현식이 사용된 컨텍스트를 이용해서 람다 표현식과 관련된 함수형 인터페이스를 추론
+
+- 대상 형식을 이용해서 함수 디스크립터를 알 수 있기 때문에 람다의 시그니처도 추론 가능
+
+- 따라서 컴파일러가 람다 파라미터 형식에 접근할 수 있으므로 람다에서 생략 가능
+
+- ``` java
+  Comparator<Apple> c = (Apple a1, Apple a2) -> a1.getWeight().compareTo(a2.getWeight());
+  Comparator<Apple> c = (a1, a2) -> a1.getWeight().compareTo(a2.getWeight());	// 형식 추론하므로 Apple 생략 가능
+  ```
+
+
+
+#### 지역 변수 사용
+
+- 람다에서는 자유 변수 사용 가능.
+
+  - 자유 변수: 파라미터로 넘겨진 변수가 아닌 외부에서 정의된 변수
+
+- 단, 명시적으로 `final`로 선언되거나, 실질적으로  `final`처럼 취급되어야 함.
+
+  - 람다는 인스턴스 변수(힙에 저장)와 정적 변수(스택에 저장)를 자유롭게 캡쳐(자신의 바디에서 참조)할 수 있기 때문
+
+  - 아래 코드는 컴파일 불가
+
+  - ``` java
+    int portNumber = 1233;
+    Runnable r = () -> System.out.println(portNumber);
+    portNumber = 11233;
+    ```
+
+
+
+### 메서드 참조
+
+
+
+
+
+
+
+
+
+
+
