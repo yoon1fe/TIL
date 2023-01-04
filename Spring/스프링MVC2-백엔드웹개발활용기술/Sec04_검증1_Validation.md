@@ -79,17 +79,133 @@ public String addItem(@ModelAttribute Item item, BindingResult bindingResult, Re
 
 
 
+### BindingResult
 
+- 스프링ㅇ이 제공하는 **검증 오류**를 보관하는 객체.
+- `BindingResult` 가 있으면 `@ModelAttribute` 에 데이터 바인딩 시 오류가 발생해도 컨트롤러가 호출된다!
+  - `BindingResult` 없으면: 400 오류 발생하면서 컨트롤러 미호출, 오류 페이지 이동
+  - `BindingResult` 있으면: 오류 정보(`FieldError`)를 `BindingResult`에 담아서 컨트롤러 정상 호출
+
+
+
+#### BindingResult에 검증 오류 적용하는 세 가지 방법
+
+- `@ModelAttribute`의 객체에 타입 오류 등으로 바인딩이 실패하는 경우, 스프링이 `FieldError` 생성해서 `BindingResult`에 넣기
+- 개발자가 직접 넣기
+- `Validator` 사용 -> 뒤에서 설명
+
+
+
+#### 주의
+
+- `BindingResult`는 그래서 순서가 중요하다. 검증할 대상 바로 다음에 와야 한다.
+- `BindingResult`는 Model에 자동으로 포함된다.
 
 
 
 ## FieldError, ObjectError
 
+`FieldError` 생성자 파라미터 중 `rejectedValue` 에 사용자가 입력한 값(거절된 값)을 추가.
 
+`FieldError`가 사용자가 입력한 값(`rejectedValue`)을 갖고 있다.
 
 
 
 ## 오류 코드와 메시지 처리
+
+
+
+## 오류 코드와 메시지 처리
+
+### V1
+
+`FieldError`, `ObjectError` 의 생성자는 `errorCode`, `arguments` 파라미터를 제공하는데, 오류 발생 시 오류 코드로 메시지를 찾기 위해 사용된다.
+
+
+
+errors.properties
+
+```properties
+required.item.itemName=상품 이름은 필수입니다.
+range.item.price=가격은 {0} ~ {1} 까지 허용합니다.
+max.item.quantity=수량은 최대 {0} 까지 허용합니다.
+totalPriceMin=가격 * 수량의 합은 {0}원 이상이어야 합니다. 현재 값 = {1}
+```
+
+
+
+.java
+
+``` java
+bindingResult.addError(new FieldError("item", "itemName",
+                item.getItemName(), false, new String[]{"required.item.itemName"}, null,
+                null));
+bindingResult.addError(new FieldError("item", "price", item.getPrice(),
+                false, new String[]{"range.item.price"}, new Object[]{1000, 1000000}, null));
+```
+
+- `codes`: `required.item.itemName` 을 사용해서 메시지 코드 지정. 메시지 코드는 배열로 여러 값을 전달할 수도 있는데, 순서대로 매칭해서 처음 매칭되는 메시지가 사용된다.
+- `arguments`: `Object[]{1000, 1000000}`를 사용해서 코드의 `{0}`, `{1}`로 치환할 값을 전달한다.
+
+
+
+### v2
+
+오류 코드 좀 더 자동화할 수 있지 않을까?
+
+
+
+컨트롤러에서 `BindingResult` 는 검증해야 할 객체인 `target` 바로 다음에 온다. 따라서 `BindingResult` 는 이미 본인이 검증해야 할 객체인 `target` 을 알고 있다.
+
+
+
+#### `rejectValue()`, `reject()`
+
+- `FieldError`, `ObjectError`를 직접 생성하지 않고 검증 오류를 다룰 수 있다.
+
+
+
+``` java
+rejectValue() void rejectValue(@Nullable String field, String errorCode, @Nullable Object[] errorArgs, @Nullable String defaultMessage);
+```
+
+-  field : 오류 필드명 
+- errorCode : 오류 코드(이 오류 코드는 메시지에 등록된 코드가 아니다. 뒤에서 설명할 messageResolver를 위한 오류 코드이다.) 
+- errorArgs : 오류 메시지에서 {0} 을 치환하기 위한 값 
+- defaultMessage : 오류 메시지를 찾을 수 없을 때 사용하는 기본 메시지
+
+
+
+``` java
+            bindingResult.rejectValue("itemName", "required");
+```
+
+- `required.item.itemName` 이라고 명시하지 않아도 알아서 찾아서 출력한다. `MessageCodesResolver` 가 해결해준다.
+
+
+
+### v3
+
+오류코드를 어떻게 만드는 것이 좋을까? 디테일하게? 단순하게?
+
+단순하게 만들면 범용성이 좋지만, 세밀하게 작성하기 어렵다. 반대로 너무 자세하게 만들면 범용성이 떨어진다.
+
+가장 좋은 방법은 범용성이 좋게 만들어서 사용하다가, 세밀하게 작성해야 하는 경우, 세밀한 내용이 적용되도록 메시지에 **단계**를 두는 법이 있다.
+
+
+
+``` properties
+#Level1
+required.item.itemName: 상품 이름은 필수 입니다.
+#Level2
+required: 필수 값 입니다.
+```
+
+`MessageCodesResolver`가 만들어준다~~
+
+Ex) `new String[] {"required.item.itemName", "required"};`
+
+
 
 
 
