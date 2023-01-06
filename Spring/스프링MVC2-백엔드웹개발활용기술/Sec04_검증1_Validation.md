@@ -207,11 +207,170 @@ Ex) `new String[] {"required.item.itemName", "required"};`
 
 
 
+### v4
 
+`MessageCodesResolver codesResolver = new DefaultMessageCodesResolver();`
+
+`MesageCodesResolver`: 검증 오류 코드로 메시지 코드들 생성한다.
+
+
+
+##### `DefaultMessageCodesResolver`의 기본 메시지 생성 규칙
+
+객체 오류
+
+1. `code + "." + object name`
+2. `code`
+
+
+
+필드 오류
+
+1. `code + "." + object name + "." + field`
+2. `code + "." + field`
+3. `code + "." + field type`
+4. `code`
+
+
+
+- `rejectValue()`, `reject()`는 내부에서 `MessageCodesResolver`를 사용한다. 여기서 메시지 코드들을 생성한다.
+- `FieldError`, `ObjectError`의 생성자를 보면 오류 코드를 여러 개 가질 수 있는데, `MessageCodesResolver`로 생성된 순서대로 보관한다.
+
+
+
+### v5
+
+**핵심은 구체적인 것에서 ~> 덜 구체적인 것으로**
+
+- 메시지와 관련된 공통 전략을 편리하게 도입할 수 있다.
+
+
+
+``` java
+if (!StringUtils.hasText(item.getItemName())) {
+  bindingResult.rejectValue("itemName", "required");
+}
+// ==
+// Empty, 공백같은 단순한 기능만 제공
+ValidationUtils.rejectIfEmptyOrWhitespace(bindingResult, "itemName", "required");
+```
+
+
+
+### v6
+
+#### 스프링이 직접 만든 오류 메시지 처리
+
+검증 오류 코드
+
+- 개발자가 직접 설정 -> `rejectValue()` 직접 호출
+- 스프링이 직접 검증 오류에 추가 > 주로 타입 안 맞는 경우..
+
+
+
+스프링은 타입 오류가 발생하면  `typeMismatch` 라는 오류 코드를 사용한다. `errors.properties`에 따로 메시지를 정의해주지 않았기 때문에 스프링이 생성한 기본 메시지가 출력된다.
+
+
+
+``` proper
+typeMismatch.java.lang.Integer=~~~
+typeMismatch.item.price=~~~
+```
 
 
 
 ## Validator 분리
 
+**복잡한 검증 로직을 별도로 분리**하자.
+
+현재 코드는 컨트롤러 단에 검증 로직이 차지하는 부분이 많다. 이럴 경우 별도의 클래스로 역할을 분리하는 것이 좋다.
 
 
+
+#### `Validator` 인터페이스
+
+```java
+public interface Validator {
+  // 사용하는 클래스가해당 검증기(Validator)를 지원하는가?
+  boolean supports(Class<?> clazz);
+
+  // 실제 검증 로직
+  void validate(Object target, Errors errors);
+}
+```
+
+
+
+```java
+@PostMapping("/add")
+public String addItemV5(@ModelAttribute Item item, BindingResult bindingResult,
+    RedirectAttributes redirectAttributes) {
+
+    itemValidator.validate(item, bindingResult);
+
+    if (bindingResult.hasErrors()) {
+        return "validation/v2/addForm";
+    }
+    //성공 로직
+    Item savedItem = itemRepository.save(item);
+    redirectAttributes.addAttribute("itemId", savedItem.getId());
+    redirectAttributes.addAttribute("status", true);
+    return "redirect:/validation/v2/items/{itemId}";
+}
+```
+
+
+
+스프링이 `Validator` 인터페이스를 제공해주는 이유는 **체계적으로 검증 기능을 도입**하기 위해서이다. `Validator` 인터페이스의 구현체로 검증기를 만들면 **스프링의 도움을 받을 수 있다(알아서 호출 해줌)**!!
+
+
+
+`WebDataBinder`: 스프링의 파라미터 바인딩의 역할을 해주고 검증 기능도 포함하고 있다.
+
+
+
+```java
+public class ValidationItemControllerV2 {
+
+  private final ItemRepository itemRepository;
+  private final ItemValidator itemValidator;
+
+  @InitBinder
+  public void init(WebDataBinder dataBinder) {
+    log.info("init binder {}", dataBinder);
+    dataBinder.addValidators(itemValidator);
+  }
+}
+```
+
+- 컨트롤러가 호출될 때마다 `WebDataBinder`가 새로 생성됨
+- `WebDataBinder`에 검증기를 추가하면 해당 컨트롤러에서는 검증기를 자동으로 적용한다.
+- `@InitBinder`: 해당 컨트롤러에만 적용
+
+
+
+#### `@Validated` 적용
+
+
+
+```java
+@PostMapping("/add")
+public String addItemV6(@Validated @ModelAttribute Item item, BindingResult
+    bindingResult, RedirectAttributes redirectAttributes) {
+  if (bindingResult.hasErrors()) {
+    log.info("errors={}", bindingResult);
+    return "validation/v2/addForm";
+  }
+  //성공 로직
+  Item savedItem = itemRepository.save(item);
+  redirectAttributes.addAttribute("itemId", savedItem.getId());
+  redirectAttributes.addAttribute("status", true);
+  return "redirect:/validation/v2/items/{itemId}";
+}
+```
+
+- `@Validated`: 검증기를 실행하라는 어노테이션. 얘가 붙으면 `WebDataBinder`에 등록한 검증기를 찾아서 실행한다. 여러 검증기가 등록된다면 `supports()` 메서드를 통해서 구분된다.
+
+
+
+`Validator`를 글로벌로 설정하고 싶으면 메인 컨트롤러에다가 추가하면 된다.
