@@ -129,15 +129,68 @@ resolvers) {
 
 ## @ExceptionHandler
 
+웹 브라우저에 HTML 화면을 제공할 때 오류가 발생하면 `BasicErrorController`를 사용하면 편하다. 
+
+반면에 API는 시스템마다 스펙이 모두 달라서 각각 세밀한 제어가 필요하다.
 
 
 
+**API 예외 처리의 어려운 점**
+
+- `HandlerExceptionResolver`에서는 `ModelAndView`를 반환해야 했다. 이는 API 응답에는 적절치 않다.
+- API 응답을 위해서 `HttpServletResponse`에 직접 응답 데이터를 넣어주어야 한다.
+- 특정 컨트롤러에서만 발생하는 예외를 별도로 처리하기 어렵다.
 
 
 
+**`@ExceptionHandler`**
+
+스프링은 `ExceptionHandlerExceptionResolver`를 기본으로 제공한다.
+
+애너테이션 선언하고, 해당 컨트롤러에서 처리하고 싶은 예외를 지정해주면 된다. 그러면 해당 컨트롤러에서 예외가 발생하면 이 메서드가 호출된다.
 
 
+
+``` java
+@ExceptionHandler(IllegalArgumentException.class)
+public ErrorResult illegalExHandle(IllegalArgumentException e) {
+ log.error("[exceptionHandle] ex", e);
+ return new ErrorResult("BAD", e.getMessage());
+}
+```
+
+- 여러 예외 처리 가능 (`@ExceptionHandler({AException.class, BException.class})`)
+- 예외 생략하면 메서드 파라미터의 예외가 지정된다
 
 
 
 ## @ControllerAdvice
+
+`@ExceptionHander`는 정상 코드와 예외 처리 코드가 하나의 컨트롤러에 섞여 있다. `@ControllerAdvice` 또는 `@RestControllerAdvice`를 사용하면 둘을 분리할 수 있다.
+
+
+
+**`@ControllerAdvice`**
+
+- 대상으로 지정한 여러 컨트롤러에 `@ExceptionHandler`, `@InitBinder` 기능을 부여한다.
+- `@ControllerAdvice`에 대상을 지정하지 않으면 모든 컨트롤러에 적용
+- `@RestControllerAdivce`는 `@ControllerAdvice`에 `@ResponseBody` 추가된 버전.
+
+
+
+**대상 컨트롤러 지정 방법**
+
+``` java
+// Target all Controllers annotated with @RestController
+@ControllerAdvice(annotations = RestController.class)
+public class ExampleAdvice1 {}
+
+// Target all Controllers within specific packages
+@ControllerAdvice("org.example.controllers")
+public class ExampleAdvice2 {}
+
+// Target all Controllers assignable to specific classes
+@ControllerAdvice(assignableTypes = {ControllerInterface.class,
+AbstractController.class})
+public class ExampleAdvice3 {}
+```
