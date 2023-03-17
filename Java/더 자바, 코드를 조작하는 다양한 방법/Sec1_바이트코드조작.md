@@ -78,7 +78,7 @@ public class MasulsaAgent {
 
 그밖에도 자바 소스 코드 건리지 않고 코드 변경이 필요한 여러 경우에 사용할 수 있다. 
 
-- 프로파일러 (newrelic) 
+- 프로파일러 (newrelic, pinpoint) 
 - 최적화 
 - 로깅 
 - ...
