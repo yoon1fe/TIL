@@ -223,17 +223,226 @@ public class TxLevelTest {
 
 ### 프록시 내부 호출
 
+`@Transactional` 을 사용하면 스프링의 트랜잭션 AOP가 적용된다. 트랜잭션 AOP는 기본적으로 프록시 방식의 AOP를 사용함. 따라서 만약 프록시 객체를 거치지 않고 대상 객체를 직접 호출하게 되면 AOP가 적용되지 않고, 트랜잭션도 적용되지 않게 된다.
 
 
 
+AOP를 적용하면 스프링은 대상 객체 대신 **프록시만을 스프링 빈**으로 등록하기 때문에 의존 관계 주입 시에는 항상 프록시 객체가 주입된다. 하지만 **대상 객체의 내부에서 메서드 호출이 발생하면 프록시를 거치지 않고 대상 객체를 직접 호출해버리게 된다!!** 이렇게 되면 트랜잭션이 적용되지 않는다...
+
+
+
+``` java
+package hello.springtx.apply;
+
+@Slf4j
+@SpringBootTest
+public class InternalCallV1Test {
+
+  @Autowired
+  CallService callService;
+
+  @Test
+  void printProxy() {
+    log.info("callService class={}", callService.getClass());
+  }
+
+  @Test
+  void internalCall() {
+    callService.internal();
+  }
+
+  @Test
+  void externalCall() {
+    callService.external();
+  }
+
+  @TestConfiguration
+  static class InternalCallV1Config {
+
+    @Bean
+    CallService callService() {
+      return new CallService();
+    }
+  }
+
+  @Slf4j
+  static class CallService {
+
+    public void external() {
+      log.info("call external");
+      printTxInfo();
+      internal();
+    }
+
+    @Transactional
+    public void internal() {
+      log.info("call internal");
+      printTxInfo();
+    }
+
+    private void printTxInfo() {
+      boolean txActive = TransactionSynchronizationManager.isActualTransactionActive();
+      log.info("tx active={}", txActive);
+    }
+  }
+}
+```
+
+- `@Transactional` 애너테이션이 붙어있으므로 `CallService` 에 대한 트랜잭션 프록시 객체가 만들어지고, 이 프록시 객체가 주입된다.
+- `internalCall()` 호출: 클라이언트(테스트 코드)가 호출하는 `callService.internal()` 은 트랜잭션 프록시 객체의 메서드이므로 트랜잭션이 적용된다.
+- `externalCall()` 호출: `external()`은 `@Transactional` 이 없으므로 트랜잭션 프록시는 트랜잭션을 적용하지 않는다. 따라서 실제 `callService` 객체 인스턴스의 `external()`을 호출. `external()` 이 내부에서 호출하는 `internal()`은 트랜잭션 프록시 객체의 메서드가 아니다!! 따라서 트랜잭션이 적용안됨.
+
+
+
+**문제의 원인**
+
+자바에서 메서드 앞에 별도의 참조가 없으면 `this`라는 뜻으로 자기 자신의 메서드를 의미한다. 따라서 위에서의 메서드 호출은 프록시를 거치지 않고 대상 객체(`target`)의 인스턴스의 메서드를 바로 호출하는 것.
+
+
+
+**프록시 방식의 AOP 한계** 
+
+`@Transactional` 를 사용하는 트랜잭션 AOP는 프록시를 사용한다. 프록시를 사용하면 메서드 내부 호출에 프록시를 적용할 수 없다. 
+
+그렇다면 이 문제를 어떻게 해결할 수 있을까? 가장 단순한 방법은 내부 호출을 피하기 위해 `internal()` 메서드를 별도의 클래스로 분리하는 것이다.
+
+
+
+**`internal()` 메서드 분리**
+
+
+
+``` java
+package hello.springtx.apply;
+
+@SpringBootTest
+public class InternalCallV2Test {
+
+  @Autowired
+  CallService callService;
+
+  @Test
+  void externalCallV2() {
+    callService.external();
+  }
+
+  @TestConfiguration
+  static class InternalCallV2Config {
+
+    @Bean
+    CallService callService() {
+      return new CallService(innerService());
+    }
+
+    @Bean
+    InternalService innerService() {
+      return new InternalService();
+    }
+  }
+
+  @Slf4j
+  @RequiredArgsConstructor
+  static class CallService {
+
+    private final InternalService internalService;
+
+    public void external() {
+      log.info("call external");
+      printTxInfo();
+      internalService.internal();
+    }
+
+    private void printTxInfo() {
+      boolean txActive = TransactionSynchronizationManager.isActualTransactionActive();
+      log.info("tx active={}", txActive);
+    }
+  }
+
+  @Slf4j
+  static class InternalService {
+
+    @Transactional
+    public void internal() {
+      log.info("call internal");
+      printTxInfo();
+    }
+
+    private void printTxInfo() {
+      boolean txActive = TransactionSynchronizationManager.isActualTransactionActive();
+      log.info("tx active={}", txActive);
+    }
+  }
+}
+```
+
+- 정상적으로 `internal()`에 트랜잭션 적용!
+- 다른 해결방안도 있지만, 실무에서는 보통 별도의 클래스로 분리하는 방법을 주로 사용한다.
+
+
+
+**public 메서드만 트랜잭션 가능**
+
+스프링의 트랜잭션 AOP 기능은 `public` 메서드에만 트랜잭션을 적용하도록 기본 설정이 되어 있다. 프록시의 내부 호출 문제는 아니고, 스프링이 걍 막아둠. 이유는??
+
+- 트랜잭션은 주로 비즈니스 로직의 시작점에 걸기 때문에 대부분 외부에 열어준 곳을 시작점으로 사용한다. 클래스 레벨에 트랜잭션을 적용했을 때 모든 메서드에 트랜잭션이 걸릴 수 있는데, 이렇게 되면 트랜잭션을 의도하지 않은 곳까지 트랜잭션이 과도하게 적용될 수 있기 때문에 `public` 메서드에만 허용한다~
+- 참고로 부트 3.0부터는 `protected`, `default` 접근 제한자에도 트랜잭션이 적용된다. (`private` 만 안걸리네)
 
 
 
 ### 초기화 시점
 
+스프링 초기화 시점에는 트랜잭션 AOP가 적용되지 않을 수 있다!
 
 
 
+``` java
+package hello.springtx.apply;
+
+@SpringBootTest
+public class InitTxTest {
+
+  @Autowired
+  Hello hello;
+
+  @Test
+  void go() {
+    //초기화 코드는 스프링이 초기화 시점에 호출한다.
+  }
+
+  @TestConfiguration
+  static class InitTxTestConfig {
+
+    @Bean
+    Hello hello() {
+      return new Hello();
+    }
+  }
+
+  @Slf4j
+  static class Hello {
+
+    @PostConstruct
+    @Transactional
+    public void initV1() {
+      boolean isActive = TransactionSynchronizationManager.isActualTransactionActive();
+      log.info("Hello init @PostConstruct tx active={}", isActive);
+    }
+
+    @EventListener(value = ApplicationReadyEvent.class)
+    @Transactional
+    public void init2() {
+      boolean isActive = TransactionSynchronizationManager.isActualTransactionActive();
+      log.info("Hello init ApplicationReadyEvent tx active={}", isActive);
+    }
+  }
+}
+```
+
+- 초기화 코드(예: `@PostConstruct` )와 `@Transactional` 을 함께 사용하면 트랜잭션이 적용되지 않는다.
+
+  초기화 코드가 먼저 호출되고, 그 다음에 트랜잭션 AOP가 적용되기 때문이다. 따라서 초기화 시점에는 해당 메서드에서 트랜잭션을 획득할 수 없다.
+
+- 해결방법: `@EventListener(ApplicationReadyEvent.class)` - 스프링 컨테이너가 모두 뜬 뒤에 이벤트가 붙은 메서드를 호출해준다.
 
 
 
