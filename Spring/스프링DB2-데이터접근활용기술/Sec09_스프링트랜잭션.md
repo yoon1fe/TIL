@@ -448,13 +448,262 @@ public class InitTxTest {
 
 ## 트랜잭션 옵션
 
+ 
+
+**`@Transactional`**
+
+``` java
+@Target({ElementType.TYPE, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@Inherited
+@Documented
+public @interface Transactional {
+
+	@AliasFor("transactionManager")
+	String value() default "";
+
+	@AliasFor("value")
+	String transactionManager() default "";
+
+	String[] label() default {};
+
+	Propagation propagation() default Propagation.REQUIRED;
+
+	Isolation isolation() default Isolation.DEFAULT;
+
+	int timeout() default TransactionDefinition.TIMEOUT_DEFAULT;
+
+	String timeoutString() default "";
+
+	boolean readOnly() default false;
+
+	Class<? extends Throwable>[] rollbackFor() default {};
+
+	String[] rollbackForClassName() default {};
+
+	Class<? extends Throwable>[] noRollbackFor() default {};
+
+	String[] noRollbackForClassName() default {};
+
+}
+
+```
 
 
 
+**value, transactionManager**
+
+사용할 트랜잭션 매니저를 지정할 때 사용. 생략하면 기본으로 등록된 트랜잭션 매니저를 사용한다. 사용하는 트랜잭션 매니저가 두 개 이상이라면 이름을 지정해야 한다.
+
+
+
+**rollbackFor**
+
+예외 발생시 스프링 트랜잭션의 기본 정책
+
+- 언체크 예외인 `RuntimeException`, `Error`와 그 하위 예외가 발생하면 롤백
+- 체크 예외인 `Exception` 과 그 하위 예외가 발생하면 커밋
+
+`@Transactional(rollbackFor = Exception.class)`: 체크 예외인 `Exception` 예외도 롤백하도록 설정 (하위 예외도 대상에 포함)
+
+
+
+**noRollbackFor**
+
+반대
+
+
+
+**isolation**
+
+트랜잭션 격리 수준 지정. 보통 DB에 설정된 값 사용.
+
+
+
+**timeout**
+
+트랜잭션 수행 시간에 대한 타임아웃을 초 단위로 지정.
+
+
+
+**label**
+
+트랜잭션 애너테이션에 있는 값을 직접 읽어서 어떤 동작을 하고 싶을 때 사용. 잘 안쓴다.
+
+
+
+**readOnly**
+
+`readOnly=true`: 읽기 전용 트랜잭션 생성. 이 경우 읽기만 작동한다. 드라이버나 DB에 따라 정상 동작하지 않을 수도 있다. 읽기 최적화를 위해 많이 쓴다. 이 옵션은 크게 다음 세 곳에서 적용된다.
+
+- 프레임워크: JPA에서는 읽기 전용 트랜잭션의 경우 커밋 시점에 플러시를 호출하지 않는다. + 변경이 필요없으니 변경 감지를 위한 스냅샷 객체도 생성X. 이런 식으로 최적화
+- JDBC 드라이버: 읽기, 쓰기(마스터, 슬레이브) DB 구분해서 요청
+- DB: 내부에서 성능 최적화
 
 
 
 ## 예외와 트랜잭션 커밋/롤백
 
+예외 발생시 스프링 트랜잭션 AOP는
+
+- 언체크 예외인 `RuntimeException`, `Error`와 그 하위 예외가 발생하면 롤백
+- 체크 예외인 `Exception` 과 그 하위 예외가 발생하면 커밋
 
 
+
+``` java
+package hello.springtx.exception;
+
+@SpringBootTest
+public class RollbackTest {
+
+  @Autowired
+  RollbackService service;
+
+  @Test
+  void runtimeException() {
+    assertThatThrownBy(() -> service.runtimeException())
+        .isInstanceOf(RuntimeException.class);
+  }
+
+  @Test
+  void checkedException() {
+    assertThatThrownBy(() -> service.checkedException())
+        .isInstanceOf(MyException.class);
+  }
+
+  @Test
+  void rollbackFor() {
+    assertThatThrownBy(() -> service.rollbackFor())
+        .isInstanceOf(MyException.class);
+  }
+
+  @TestConfiguration
+  static class RollbackTestConfig {
+
+    @Bean
+    RollbackService rollbackService() {
+      return new RollbackService();
+    }
+  }
+
+  @Slf4j
+  static class RollbackService {
+    //런타임 예외 발생: 롤백
+    @Transactional
+    public void runtimeException() {
+      log.info("call runtimeException");
+      throw new RuntimeException();
+    }
+
+    //체크 예외 발생: 커밋
+    @Transactional
+    public void checkedException() throws MyException {
+      log.info("call checkedException");
+      throw new MyException();
+    }
+
+    //체크 예외 rollbackFor 지정: 롤백
+    @Transactional(rollbackFor = MyException.class)
+    public void rollbackFor() throws MyException {
+      log.info("call rollbackFor");
+      throw new MyException();
+    }
+  }
+
+  static class MyException extends Exception {
+  }
+
+}
+```
+
+- `runtimeException()`: 런타임 예외가 발생하므로 트랜잭션 롤백
+- `checkedException()`: 예외 발생해도 트랜잭션 커밋
+- `rollbackFor()`: 체크 예외이지만 트랜잭션 롤백
+
+
+
+스프링은 왜 **체크 예외는 커밋하고, 언체크 예외는 롤백**할까??
+
+스프링은 기본적으로
+
+- 체크 예외: 비즈니스 의미가 있을 때 사용
+- 언체크 예외: 복구 불가능한 예외 (DB 이슈, 네트워크 이슈 등..)
+
+
+
+**비즈니스 요구 사항에서의 예외 발생**
+
+- 시스템 예외: DB나 네트워크 이슈 등을 이유로 복구가 불가능한 예외
+
+- 비즈니스 예외: 주문시 결제 잔고가 부족하면 주문 데이터를 저장하고, 결제 상태를 대기로 처리. 이 경우 **고객에게 잔고 부족을 알리고 별도의 계좌로 입금하도록 안내해야 함**
+
+결제 잔고 부족하면 `NotEnoughMoneyException`이라는 체크 예외가 발생한다고 가정할 때, 이 예외는 시스템에 문제가 있어서 발생하는 시스템 예외가 아닌다. > 비즈니스 상황에서 발생한 비즈니스 예외. 비즈니스 예외는 매우 중요하고, 반드시 처리해야 할 경우가 많으므로 체크 예외를 고려할 수 있다.
+
+
+
+``` java
+package hello.springtx.order;
+
+public class NotEnoughMoneyException extends Exception {
+  
+  public NotEnoughMoneyException(String message) {
+    super(message);
+  }
+}
+```
+
+- 결제 잔고 부족하면 발생하는 비즈니스 예외. 체크 예외이다. 얘가 발생하면 롤백하지 않고, 주문 데이터 저장해야 한다.
+
+
+
+**`OrderService.java`**
+
+``` java
+package hello.springtx.order;
+
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class OrderService {
+
+  private final OrderRepository orderRepository;
+
+  //JPA는 트랜잭션 커밋 시점에 Order 데이터를 DB에 반영한다.
+  @Transactional
+  public void order(Order order) throws NotEnoughMoneyException {
+    log.info("order 호출");
+    orderRepository.save(order);
+
+    log.info("결제 프로세스 진입");
+
+    if (order.getUsername().equals("예외")) {
+      log.info("시스템 예외 발생");
+
+      throw new RuntimeException("시스템 예외");
+    } else if (order.getUsername().equals("잔고부족")) {
+      log.info("잔고 부족 비즈니스 예외 발생");
+      order.setPayStatus("대기");
+
+      throw new NotEnoughMoneyException("잔고가 부족합니다");
+    } else {
+      //정상 승인
+      log.info("정상 승인");
+      order.setPayStatus("완료");
+    }
+    
+    log.info("결제 프로세스 완료");
+  }
+}
+```
+
+- 정상 주문의 경우 주문 프로세스 정상 수행
+
+- `userName == 예외`: 런타임 예외로 롤백이 수행
+- `userName == 잔고부족`: 체크 예외로 커밋이 수행
