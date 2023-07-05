@@ -249,34 +249,224 @@ after transaction
 
 ## 외부 롤백
 
+바깥이 롤백되는 케이스는 어렵지 않음.
+
+논리 트랜잭션이 하나라도 롤백되면 전체 물리 트랜잭션은 롤백된다. 따라서 내부 트랜잭션이 커밋되어도 외부 트랜잭션이 롤백되면 전체가 롤백된다.
 
 
 
+``` java
+  @Test
+  void outer_rollback() {
+    log.info("외부 트랜잭션 시작");
+    TransactionStatus outer = txManager.getTransaction(new DefaultTransactionAttribute());
+    
+    log.info("내부 트랜잭션 시작");
+    TransactionStatus inner = txManager.getTransaction(new DefaultTransactionAttribute());
+    log.info("내부 트랜잭션 커밋");
+    txManager.commit(inner);
+    
+    log.info("외부 트랜잭션 롤백");
+    txManager.rollback(outer);
+  }
+```
+
+
+
+**실행 로그**
+
+```
+2023-07-06 07:22:54.046  INFO 37426 --- [    Test worker] hello.springtx.propagation.BasicTxTest   : 외부 트랜잭션 시작
+2023-07-06 07:22:54.048 DEBUG 37426 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Creating new transaction with name [null]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2023-07-06 07:22:54.049 DEBUG 37426 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Acquired Connection [HikariProxyConnection@1165725635 wrapping conn0: url=jdbc:h2:mem:242fd9c3-6fab-4e18-b020-40fc457cda1f user=SA] for JDBC transaction
+2023-07-06 07:22:54.051 DEBUG 37426 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Switching JDBC Connection [HikariProxyConnection@1165725635 wrapping conn0: url=jdbc:h2:mem:242fd9c3-6fab-4e18-b020-40fc457cda1f user=SA] to manual commit
+2023-07-06 07:22:54.051  INFO 37426 --- [    Test worker] hello.springtx.propagation.BasicTxTest   : 내부 트랜잭션 시작
+2023-07-06 07:22:54.051 DEBUG 37426 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Participating in existing transaction
+2023-07-06 07:22:54.051  INFO 37426 --- [    Test worker] hello.springtx.propagation.BasicTxTest   : 내부 트랜잭션 커밋
+2023-07-06 07:22:54.051  INFO 37426 --- [    Test worker] hello.springtx.propagation.BasicTxTest   : 외부 트랜잭션 롤백
+2023-07-06 07:22:54.051 DEBUG 37426 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Initiating transaction rollback
+2023-07-06 07:22:54.052 DEBUG 37426 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Rolling back JDBC transaction on Connection [HikariProxyConnection@1165725635 wrapping conn0: url=jdbc:h2:mem:242fd9c3-6fab-4e18-b020-40fc457cda1f user=SA]
+2023-07-06 07:22:54.052 DEBUG 37426 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Releasing JDBC Connection [HikariProxyConnection@1165725635 wrapping conn0: url=jdbc:h2:mem:242fd9c3-6fab-4e18-b020-40fc457cda1f user=SA] after transaction
+
+```
+
+- 외부 트랜잭션이 물리 트랜잭션을 시작하고 롤백
+- 내부 트랜잭션은 물리 트랜잭션에 직접적인 관여하지 않음
 
 
 
 ## 내부 롤백
 
+내부 트랜잭션이 롤백하더라도 내부 트랜잭션은 물리 트랜잭션에 영향을 주지 않는다. 근데 외부 트랜잭션은 커밋해버린다. 전체를 롤백해야 하는데.. 스프링은 어떻게 이 문제를 처리할까????
 
+
+
+``` java
+  @Test
+  void inner_rollback() {
+    log.info("외부 트랜잭션 시작");
+    TransactionStatus outer = txManager.getTransaction(new DefaultTransactionAttribute());
+    
+    log.info("내부 트랜잭션 시작");
+    TransactionStatus inner = txManager.getTransaction(new DefaultTransactionAttribute());
+    log.info("내부 트랜잭션 롤백");
+    txManager.rollback(inner);
+    
+    log.info("외부 트랜잭션 커밋");
+    assertThatThrownBy(() -> txManager.commit(outer)).isInstanceOf(UnexpectedRollbackException.class);
+  }
+```
+
+
+
+``` 
+2023-07-06 07:31:54.283  INFO 39111 --- [    Test worker] hello.springtx.propagation.BasicTxTest   : 외부 트랜잭션 시작
+2023-07-06 07:31:54.286 DEBUG 39111 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Creating new transaction with name [null]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2023-07-06 07:31:54.286 DEBUG 39111 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Acquired Connection [HikariProxyConnection@933346995 wrapping conn0: url=jdbc:h2:mem:95595a44-06a7-4886-a7e5-5296325db4ca user=SA] for JDBC transaction
+2023-07-06 07:31:54.287 DEBUG 39111 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Switching JDBC Connection [HikariProxyConnection@933346995 wrapping conn0: url=jdbc:h2:mem:95595a44-06a7-4886-a7e5-5296325db4ca user=SA] to manual commit
+2023-07-06 07:31:54.287  INFO 39111 --- [    Test worker] hello.springtx.propagation.BasicTxTest   : 내부 트랜잭션 시작
+2023-07-06 07:31:54.288 DEBUG 39111 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Participating in existing transaction
+2023-07-06 07:31:54.288  INFO 39111 --- [    Test worker] hello.springtx.propagation.BasicTxTest   : 내부 트랜잭션 롤백
+2023-07-06 07:31:54.288 DEBUG 39111 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Participating transaction failed - marking existing transaction as rollback-only
+2023-07-06 07:31:54.288 DEBUG 39111 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Setting JDBC transaction [HikariProxyConnection@933346995 wrapping conn0: url=jdbc:h2:mem:95595a44-06a7-4886-a7e5-5296325db4ca user=SA] rollback-only
+2023-07-06 07:31:54.288  INFO 39111 --- [    Test worker] hello.springtx.propagation.BasicTxTest   : 외부 트랜잭션 커밋
+2023-07-06 07:31:54.330 DEBUG 39111 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Global transaction is marked as rollback-only but transactional code requested commit
+2023-07-06 07:31:54.330 DEBUG 39111 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Initiating transaction rollback
+2023-07-06 07:31:54.331 DEBUG 39111 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Rolling back JDBC transaction on Connection [HikariProxyConnection@933346995 wrapping conn0: url=jdbc:h2:mem:95595a44-06a7-4886-a7e5-5296325db4ca user=SA]
+2023-07-06 07:31:54.331 DEBUG 39111 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Releasing JDBC Connection [HikariProxyConnection@933346995 wrapping conn0: url=jdbc:h2:mem:95595a44-06a7-4886-a7e5-5296325db4ca user=SA] after transaction
+
+```
+
+- **내부 트랜잭션 롤백**: `Participating transaction failed - marking existing transaction as rollback-only`: 내부 트랜잭션 롤백하는 시점에 요 트랜잭션을 `rollback-only`로 마킹!
+- **외부 트랜잭션 커밋**: `Global transaction is marked as rollback-only but transactional code requested commit`: 전체 트랜잭션은 롤백해야 하는데 커밋을 해버렸다!!
+
+- 외부 트랜잭션은 신규 트랜잭션이므로 DB 커넥션에 실제 커밋을 호출한다. 이때 트랜잭션 동기화 매니저에 롤백 전용(`rollbackIOnly=true`) 여부를 먼저 확인한다. 만약 표시가 있으면 물리 트랜잭션을 커밋하지 않고 **롤백**한다.
+- 실제 DB에 롤백이 반영되고 물리 트랜잭션도 종료.
+- 개발자는 커밋을 기대했는데 롤백이 되었으므로 트랜잭션 매니저가 `UnexpectedRollbackException` 예외를 던진다!!
 
 
 
 ## REQUIRES_NEW
 
+내부 트랜잭션과 외부 트랜잭션을 완전히 분리해서 사용하는 방법.
 
+각각 별도의 물리 트랜잭션을 사용해서 내부 트랜잭션이 롤백되어도 외부 트랜잭션에 영향이 없다. 반대도 마찬가지.
+
+
+
+**REQUIRES_NEW**
+
+- 물리 트랜잭션을 분리하려면 **내부 트랜잭션을 시작할 때 `REQUIRES_NEW` 옵션을 사용하면 된다.**
+- 외부 트랜잭션과 내부 트랜잭션이 각각 별도의 물리 트랜잭션을 갖게 된다. 즉, DB 커넥션을 따로 사용한다.
+
+- 각 트랜잭션의 커밋/롤백 여부가 다른 트랜잭션에 영향을 주지 않는다.
+
+
+
+``` java
+  @Test
+  void inner_rollback_requires_new() {
+    log.info("외부 트랜잭션 시작");
+    TransactionStatus outer = txManager.getTransaction(new DefaultTransactionAttribute());
+    log.info("outer.isNewTransaction()={}", outer.isNewTransaction());
+
+    log.info("내부 트랜잭션 시작");
+    DefaultTransactionAttribute definition = new DefaultTransactionAttribute();
+
+    definition.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+    TransactionStatus inner = txManager.getTransaction(definition);
+    log.info("inner.isNewTransaction()={}", inner.isNewTransaction());
+
+    log.info("내부 트랜잭션 롤백");
+    txManager.rollback(inner); // 롤백
+
+    log.info("외부 트랜잭션 커밋");
+    txManager.commit(outer); // 커밋
+  }
+```
+
+- 내부 트랜잭션을 시작할 때 전파 옵션인 `propagationBehavior 에 PROPAGATION_REQUIRES_NEW` 옵션을 주면 내부 트랜잭션을 시작할 때 기존 트랜잭션에 참여하는 것이 아니라 새로운 물리 트랜잭션을 만들어서 시작하게 된다.
+
+
+
+```
+2023-07-06 07:49:56.728  INFO 42561 --- [    Test worker] hello.springtx.propagation.BasicTxTest   : 외부 트랜잭션 시작
+2023-07-06 07:49:56.730 DEBUG 42561 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Creating new transaction with name [null]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2023-07-06 07:49:56.730 DEBUG 42561 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Acquired Connection [HikariProxyConnection@933346995 wrapping conn0: url=jdbc:h2:mem:2111df70-b349-4337-8513-c23dabc5d25e user=SA] for JDBC transaction
+2023-07-06 07:49:56.731 DEBUG 42561 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Switching JDBC Connection [HikariProxyConnection@933346995 wrapping conn0: url=jdbc:h2:mem:2111df70-b349-4337-8513-c23dabc5d25e user=SA] to manual commit
+2023-07-06 07:49:56.732  INFO 42561 --- [    Test worker] hello.springtx.propagation.BasicTxTest   : outer.isNewTransaction()=true
+2023-07-06 07:49:56.732  INFO 42561 --- [    Test worker] hello.springtx.propagation.BasicTxTest   : 내부 트랜잭션 시작
+2023-07-06 07:49:56.732 DEBUG 42561 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Suspending current transaction, creating new transaction with name [null]
+2023-07-06 07:49:56.732 DEBUG 42561 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Acquired Connection [HikariProxyConnection@1559760379 wrapping conn1: url=jdbc:h2:mem:2111df70-b349-4337-8513-c23dabc5d25e user=SA] for JDBC transaction
+2023-07-06 07:49:56.732 DEBUG 42561 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Switching JDBC Connection [HikariProxyConnection@1559760379 wrapping conn1: url=jdbc:h2:mem:2111df70-b349-4337-8513-c23dabc5d25e user=SA] to manual commit
+2023-07-06 07:49:56.733  INFO 42561 --- [    Test worker] hello.springtx.propagation.BasicTxTest   : inner.isNewTransaction()=true
+2023-07-06 07:49:56.733  INFO 42561 --- [    Test worker] hello.springtx.propagation.BasicTxTest   : 내부 트랜잭션 롤백
+2023-07-06 07:49:56.733 DEBUG 42561 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Initiating transaction rollback
+2023-07-06 07:49:56.733 DEBUG 42561 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Rolling back JDBC transaction on Connection [HikariProxyConnection@1559760379 wrapping conn1: url=jdbc:h2:mem:2111df70-b349-4337-8513-c23dabc5d25e user=SA]
+2023-07-06 07:49:56.734 DEBUG 42561 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Releasing JDBC Connection [HikariProxyConnection@1559760379 wrapping conn1: url=jdbc:h2:mem:2111df70-b349-4337-8513-c23dabc5d25e user=SA] after transaction
+2023-07-06 07:49:56.734 DEBUG 42561 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Resuming suspended transaction after completion of inner transaction
+2023-07-06 07:49:56.734  INFO 42561 --- [    Test worker] hello.springtx.propagation.BasicTxTest   : 외부 트랜잭션 커밋
+2023-07-06 07:49:56.734 DEBUG 42561 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Initiating transaction commit
+2023-07-06 07:49:56.734 DEBUG 42561 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Committing JDBC transaction on Connection [HikariProxyConnection@933346995 wrapping conn0: url=jdbc:h2:mem:2111df70-b349-4337-8513-c23dabc5d25e user=SA]
+2023-07-06 07:49:56.735 DEBUG 42561 --- [    Test worker] o.s.j.d.DataSourceTransactionManager     : Releasing JDBC Connection [HikariProxyConnection@933346995 wrapping conn0: url=jdbc:h2:mem:2111df70-b349-4337-8513-c23dabc5d25e user=SA] after transaction
+
+```
+
+- 내/외부 트랜잭션 모두 신규 트랜잭션. 물리 트랜잭션을 시작한다. 내부 트랜잭션에서 `PROPAGATION_REQUIRES_NEW` 옵션을 사용했기 때문.
+- 내부 트랜잭션은 신규 트랜잭션이므로 롤백하면 실제 물리 트랜잭션을 롤백. `conn1` 커넥션 사용
+- 외부 트랜잭션도 신규 트랜잭션이므로 커밋하면 실제 물리 트랜잭션을 커밋. `connn0` 커넥션 사용
+- 참고: `REQUIRES_NEW`를 사용하면 DB 커넥션이 동시에 두 개가 사용된다는 점 주의!
 
 
 
 ## 다양한 전파 옵션
 
+전파 옵션 디폴트: `REQUIRED`. 실무에서는 대부분 REQUIRED 옵션 사용. 가끔씩 `REQUIRES_NEW` 사용..
 
 
 
+**REQUIRED**
+
+- 가장 많이 사용하는 기본 설정. **기존 트랜잭션이 없으면 생성하고, 있으면 참여한다.**
+- 트랜잭션이 필수라는 의미
 
 
 
+**REQUIRES_NEW**
+
+- **항상 트랜잭션 생성한다.**
 
 
 
+**SUPPORT**
 
-### 
+- **트랜잭션을 지원한다.** 기존 트랜잭션이 없으면 없는 대로 진행하고, 있으면 참여한다.
+
+
+
+**NOT_SUPPORT**
+
+- **트랜잭션을 지원하지 않는다.** 기존 트랜잭션이 있든 없든 트랜잭션 없이 진행한다. 기존 트랜잭션은 보류한다.
+
+
+
+**MANDATORY**
+
+- **트랜잭션이 반드시 있어야 한다.** 기존 트랜잭션이 없으면 **예외가 발생!** (`IllegalTransactionStateException`)
+
+
+
+**NEVER**
+
+- **트랜잭션을 사용하지 않는다.** 기존 트랜잭션이 존재하면 예외 발생!
+
+
+
+**NESTED**
+
+- **기존 트랜잭션이 없으면 새로운 트랜잭션 생성**
+- **기존 트랜잭션이 있으면 중첩 트랜잭션 생성**
+  - 중첩 트랜잭션은 외부 트랜잭션의 영향을 받지만, 외부에 영향을 주지 않는다.
+  - 중첩 트랜잭션은 롤백되어도 외부 트랜잭션은 커밋 가능
+  - 외부 트랜잭션이 롤백되면 중첩 트랜잭션도 롤백
+- JPA에서 사용 불가
