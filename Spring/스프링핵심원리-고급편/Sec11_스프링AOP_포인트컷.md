@@ -506,19 +506,119 @@ public class ArgsTest {
 
 ### @target, @within
 
+- `@target`: 실행 객체의 클래스에 주어진 타입의 애너테이션이 있는 조인 포인트
+  - `@target(hello.aop.member.annotation.ClassAop)`
+  - **부모 클래스의 메서드까지** 어드바이스를 모두 적용. 인스턴스 기준
+- `@within`: 주어진 애너테이션이 있는 타입 내 조인 포인트
+  - `@within(hello.aop.member.annotation.ClassAop)`
+  - **자기 자신의 클래스에 정의된 메서드에만** 어드바이스 적용. 해당 타입 기준
 
+
+
+**주의**
+
+`args`, `@args`, `@target` 포인트컷 지시자는 단독으로 사용하면 안된다.
+
+위 포인트컷 지시자들은 실제 객체 인스턴스가 생성되고 실행될 때 어드바이스 적용 여부를 확인할 수 있는데, 스프링 컨테이너가 프록시를 생성하는 시점은 애플리케이션 로딩 시점이다. 이때 얘네들을 보고 스프링은 모든 스프링 빈에 AOP를 적용하려고 시도하는데, 스프링이 내부에서 사용하는 빈 중에 `final`로 선언된 애들도 있기 때문에 오류 발생할 수 있다.
 
 
 
 ### @annotation, @args
 
+**`@annotation`**
 
+- 메서드가 주어진 애너테이션을 갖고 있으면 조인 포인트 매칭
+
+- `@annotation(hello.aop.member.annotation.MethodAop)`
+
+
+
+메서드에 애너테이션이 있으면 매칭한다.
+
+```java
+package hello.aop.pointcut;
+
+import hello.aop.member.MemberService;
+import lombok.extern.slf4j.Slf4j;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+
+@Slf4j
+@Import(AtAnnotationTest.AtAnnotationAspect.class)
+@SpringBootTest
+public class AtAnnotationTest {
+
+  @Autowired
+  MemberService memberService;
+
+  @Test
+  void success() {
+    log.info("memberService Proxy={}", memberService.getClass());
+    memberService.hello("helloA");
+  }
+
+  @Slf4j
+  @Aspect
+  static class AtAnnotationAspect {
+
+    @Around("@annotation(hello.aop.member.annotation.MethodAop)")
+    public Object doAtAnnotation(ProceedingJoinPoint joinPoint) throws Throwable {
+      log.info("[@annotation] {}", joinPoint.getSignature());
+      return joinPoint.proceed();
+    }
+  }
+}
+```
+
+
+
+**`@args`**
+
+- 전달된 실제 인수의 런타입 타입이 주어진 타입의 애너테이션을 갖는 조인 포인트
+- 전달된 인수의 런타임 타입에 `@Check` 애너테이션이 있는 경우 매칭
 
 
 
 ### bean
 
+- 스프링 전용 포인트컷 지시자. 빈의 이름으로 지정!
+- `@Around("bean(orderService) || bean(*Repository)")`
+- `*` 같은 패턴 사용 가능
 
+
+
+```java
+package hello.aop.pointcut;
+
+@Slf4j
+@Import(BeanTest.BeanAspect.class)
+@SpringBootTest
+public class BeanTest {
+
+  @Autowired
+  OrderService orderService;
+
+  @Test
+  void success() {
+    orderService.orderItem("itemA");
+  }
+
+  @Aspect
+  static class BeanAspect {
+
+    @Around("bean(orderService) || bean(*Repository)")
+    public Object doLog(ProceedingJoinPoint joinPoint) throws Throwable {
+      log.info("[bean] {}", joinPoint.getSignature());
+      return joinPoint.proceed();
+    }
+  }
+}
+```
 
 
 
