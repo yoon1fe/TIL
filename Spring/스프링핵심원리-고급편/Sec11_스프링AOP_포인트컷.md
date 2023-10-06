@@ -624,8 +624,112 @@ public class BeanTest {
 
 ### 매개변수 전달
 
+this, target, args, @target, @within, @annotation, @args 포인트컷 표현식을 사용해서 어드바이스에 매개변수를 전달할 수 있다.
 
+ex)
+
+``` java
+@Before("allMember() && args(arg,..)")
+public void logArgs3(String arg) {
+  log.info("[logArgs3] arg={}", arg);
+}
+```
+
+- 포인트컷 이름과 매개변수 이름 맞추어야 함.
+- 타입이 메서드에 지정한 타입으로 제한된다.
+  - `args(arg,..)` -> `args(String,..)`
+
+
+
+```java
+package hello.aop.pointcut;
+
+@Slf4j
+@Import(ParameterTest.ParameterAspect.class)
+@SpringBootTest
+public class ParameterTest {
+
+  @Autowired
+  MemberService memberService;
+
+  @Test
+  void success() {
+    log.info("memberService Proxy={}", memberService.getClass());
+    memberService.hello("helloA");
+  }
+
+  @Slf4j
+  @Aspect
+  static class ParameterAspect {
+
+    @Pointcut("execution(* hello.aop.member..*.*(..))")
+    private void allMember() {
+    }
+
+    @Around("allMember()")
+    public Object logArgs1(ProceedingJoinPoint joinPoint) throws Throwable {
+      Object arg1 = joinPoint.getArgs()[0];
+      log.info("[logArgs1]{}, arg={}", joinPoint.getSignature(), arg1);
+      return joinPoint.proceed();
+    }
+
+    @Around("allMember() && args(arg,..)")
+    public Object logArgs2(ProceedingJoinPoint joinPoint, Object arg)
+        throws Throwable {
+      log.info("[logArgs2]{}, arg={}", joinPoint.getSignature(), arg);
+      return joinPoint.proceed();
+    }
+
+    @Before("allMember() && args(arg,..)")
+    public void logArgs3(String arg) {
+      log.info("[logArgs3] arg={}", arg);
+    }
+
+    @Before("allMember() && this(obj)")
+    public void thisArgs(JoinPoint joinPoint, MemberService obj) {
+      log.info("[this]{}, obj={}", joinPoint.getSignature(),
+          obj.getClass());
+    }
+
+    @Before("allMember() && target(obj)")
+    public void targetArgs(JoinPoint joinPoint, MemberService obj) {
+      log.info("[target]{}, obj={}", joinPoint.getSignature(),
+          obj.getClass());
+    }
+
+    @Before("allMember() && @target(annotation)")
+    public void atTarget(JoinPoint joinPoint, ClassAop annotation) {
+      log.info("[@target]{}, obj={}", joinPoint.getSignature(),
+          annotation);
+    }
+
+    @Before("allMember() && @within(annotation)")
+    public void atWithin(JoinPoint joinPoint, ClassAop annotation) {
+      log.info("[@within]{}, obj={}", joinPoint.getSignature(),
+          annotation);
+    }
+
+    @Before("allMember() && @annotation(annotation)")
+    public void atAnnotation(JoinPoint joinPoint, MethodAop annotation) {
+      log.info("[@annotation]{}, annotationValue={}",
+          joinPoint.getSignature(), annotation.value());
+    }
+  }
+}
+```
 
 
 
 ### this, target
+
+- `this`: 스프링 빈 객체(스프링 AOP 프록시 객체)를 대상으로 하는 조인 포인트
+- `target`: Target 객체 (실제 객체)를 대상으로 하는 조인 포인트
+
+- 다음과 같이 적용 타입 하나를 정확하게 지정해야 한다.
+
+  ``` java
+  this(hello.aop.member.MemberService)
+  target(hello.aop.member.MemberService)
+  ```
+
+- 부모 타입 허용
