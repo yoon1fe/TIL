@@ -35,7 +35,120 @@
 
 
 
+**Spring Data JPA 쿼리 메서드**
+
+- 메서드 명만으로 쿼리를 만들어주는 쿼리 메서드도 테스트가 필요한가?
+  - 이도 역시 내가 작성한 코드이기 때문에 테스트 작성하는 것이 좋다.
+
+
+
+**Repository 테스트**
+
+- 단위 테스트 성격에 가깝다.
+- `@DataJpaTst`: @SpringBootTest 보다 가볍다. JPA 관련된 Bean 들만 주입해주기 때문에 빠르다.
+
+- `extracting()`: 검증하고자 하는 필드만 추출
+
+
+
+```java
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
+
+import java.util.List;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+
+@ActiveProfiles("test")
+//@SpringBootTest
+@DataJpaTest
+class ProductRepositoryTest {
+
+  @Autowired
+  ProductRepository productRepository;
+
+  @DisplayName("원하는 판매 상태를 가진 상품들을 조회한다.")
+  @Test
+  void findAllBySellingStatusIn() {
+    // given
+    Product product1 = Product.builder()
+        .productNumber("001")
+        .type(ProductType.HANDMADE)
+        .sellingStatus(ProductSellingStatus.SELLING)
+        .name("아메리카노")
+        .price(4000)
+        .build();
+
+    Product product2 = Product.builder()
+        .productNumber("002")
+        .type(ProductType.HANDMADE)
+        .sellingStatus(ProductSellingStatus.HOLD)
+        .name("카페라떼")
+        .price(4500)
+        .build();
+
+    Product product3 = Product.builder()
+        .productNumber("003")
+        .type(ProductType.HANDMADE)
+        .sellingStatus(ProductSellingStatus.STOP_SELLING)
+        .name("팥빙수")
+        .price(7000)
+        .build();
+
+    productRepository.saveAll(List.of(product1, product2, product3));
+
+    // when
+    List<Product> products = productRepository.findAllBySellingStatusIn(List.of(ProductSellingStatus.SELLING, ProductSellingStatus.HOLD));
+
+    // then
+    assertThat(products).hasSize(2)
+        .extracting("productNumber", "name", "sellingStatus")
+        .containsExactlyInAnyOrder(
+            tuple("001", "아메리카노", ProductSellingStatus.SELLING),
+            tuple("002", "카페라떼", ProductSellingStatus.HOLD)
+        );
+  }
+
+}
+```
+
+
+
+**Persistence Layer**
+
+- Data Access 역할
+- 비즈니스 가공 로직이 포함되어서는 안된다.
+- Data에 대한 CRUD 에만 집중한 레이어
+
+- **트랜잭션**을 보장해야 한다.
+
+
+
 ## Business Layer 테스트
+
+Service test = Business layer + Persistence layer
+
+통합적으로 테스트.
+
+
+
+**요구사항**
+
+- 상품 번호 리스트 받아 주문 생성
+- 주문은 주문 상태, 주문 등록시간을 가짐
+- 주문의 총 금액을 계산할 수 있어야 함
+
+
+
+**`@SpringBootTest` vs. `@DataJpaTest`**
+
+- @DataJpaTest 애너테이션에는 @Transactional 애너테이션이 포함되어 있음.
+- 따라서 테스트 끝나면 자동으로 롤백된다.
+- @SpringBootTest + @Transactional 로도 대체 가능. 하지만 이렇게 쓰면 문제점이 있음.
 
 
 
