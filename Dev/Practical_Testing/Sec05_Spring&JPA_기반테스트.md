@@ -152,7 +152,17 @@ Service test = Business layer + Persistence layer
 
 
 
+**추가 요구사항**
 
+- 주문 생생 시 재고 확인 및 개수 차감 후 생성
+- 재고는 상품번호를 가진다.
+- 재고와 관련있는 상품 타입은 병 음료, 베이커리이다.
+
+
+
+**@Transactional**
+
+- JPA 의 변경 감지 기능을 사용해서 update 쿼리가 날아가는걸 기대했는데, **트랜잭션 경계가 설정되지 않았기 때문에** @Transactional 애너테이션이 없으면 정상적으로 동작하지 않는다.
 
 
 
