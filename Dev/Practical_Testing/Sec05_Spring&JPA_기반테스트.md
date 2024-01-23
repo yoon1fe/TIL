@@ -168,3 +168,40 @@ Service test = Business layer + Persistence layer
 
 ## Presentation Layer 테스트
 
+- 외부 세계의 요청을 가장 먼저 받는 계층
+
+- 파라미터에 대한 최소한의 검증을 수행!
+
+- 비즈니스 로직은 별로 없고, **넘어오는 값의 validation 체크가 중요**
+
+  
+
+presentation layer 테스트할 때는 하위 레이어들은 모두 mocking 처리(해야만 하는 건 아님;)
+
+
+
+**MockMvc**
+
+- Mock(가짜) 객체를 사용해 스프링 MVC 도앚ㄱ을 재현할 수 있는 테스트 프레임워크
+
+
+
+**요구 사항**
+
+- 관리자 페이지에서 신규 상품 등록 가능
+- 상품명, 상품 타입, 판매 상태, 가격 등을 입력받음
+
+
+
+ **@Transactional 의 readOnly 옵션**
+
+- readOnly default: false
+- true 로 주면 읽기 전용 트랜잭션이 열린다.
+
+- CUD 동작 안함. 조회만 가능
+
+- JPA 에서 CUD 스냅샨 저장, 변경 감지를 안해도 됨. -> 성능 향상
+
+- CQRS - Command / Query 의 책임을 분리하자.
+
+  == Command 형 메서드 (CUD) 와 Query 형 메서드(R) 에 잘 분리해서 해당 옵션을 주자.
