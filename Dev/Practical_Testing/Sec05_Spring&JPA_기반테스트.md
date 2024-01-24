@@ -182,7 +182,15 @@ presentation layer 테스트할 때는 하위 레이어들은 모두 mocking 처
 
 **MockMvc**
 
-- Mock(가짜) 객체를 사용해 스프링 MVC 도앚ㄱ을 재현할 수 있는 테스트 프레임워크
+- Mock(가짜) 객체를 사용해 스프링 MVC 동작을 재현할 수 있는 테스트 프레임워크
+- `@WebMvcTest`: 컨트롤러 관련 빈만 띄울 수 있는 가벼운 애너테이션
+
+
+
+**@MockBean**
+
+- Mockito가 제공하는 애너테이션
+- 컨테이너에 mockito 가 만든 mock 객체를 넣어주는 역할을 함.
 
 
 
@@ -205,3 +213,29 @@ presentation layer 테스트할 때는 하위 레이어들은 모두 mocking 처
 - CQRS - Command / Query 의 책임을 분리하자.
 
   == Command 형 메서드 (CUD) 와 Query 형 메서드(R) 에 잘 분리해서 해당 옵션을 주자.
+
+
+
+컨트롤러단 응답은 규격화된 응답이 좋다.
+
+
+
+**@NotNull, @NotBlank, @NotEmpty**
+
+- @NotNull: null 여부만 체크
+
+- @NotEmpty: `"   "` 통과
+- @NotBlank: `""`, `"    "` 다 통과X
+
+
+
+**validation 에 대한 책임 분리**
+
+- ex. 상품 이름은 20자 제한.. 컨트롤러 앞단에서 체크하고 튕겨내는 것이 과연 옳은가? 도메인 성격에 맞는, 비즈니스적인 요구사항..
+
+
+
+**controller 단의 DTO 와 service 단의 DTO 를 분리**
+
+- 각 레이어의 결합도를 낮추어 추후 모듈 분리 등 할 때 용이
+- validation 책임 분리 가능
