@@ -422,13 +422,51 @@ public class MemoryConfig {
 
 ### 만들기
 
+순수 라이브러리 jar 만들어보자.
 
+
+
+**빌드**
+
+- `./gradlew clean build`
+- 압출 풀기: `jar -xvf memory-v1.jar`
 
 
 
 ### 사용하기
 
+``` groovy
+dependencies {
+  implementation files('libs/memory-v1.jar')
+}
+```
 
+- 라이브러리를 jar 파일로 직접 가지고 있으면 files 로 지정.
+
+
+
+**라이브러리 설정**
+
+``` java
+@Configuration
+public class MemoryConfig {
+
+ @Bean
+ public MemoryFinder memoryFinder() {
+ return new MemoryFinder();
+ }
+
+ @Bean
+ public MemoryController memoryController() {
+ return new MemoryController(memoryFinder());
+ }
+}
+```
+
+- 스프링 부트 자동 구성을 사용하는 것이 아니기 때문에 빈을 직접 등록해주어야 함.
+
+- 외부 라이브러리를 사용하는 클라이언트 개발자 입장에서 생각해보면 라이브러리 내부에 있는 어떤 빈을 등록해야 하는지 알아야 하고, 그걸 다 일일히 등록해야 한다...
+- 이런 부분을 자동으로 처리해주는 것이 **스프링 부트 자동 구성**!
 
 
 
@@ -436,13 +474,55 @@ public class MemoryConfig {
 
 ### 만들기
 
+```java
+package memory;
 
+import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
+
+@AutoConfiguration
+@ConditionalOnProperty(name = "memory", havingValue = "on")
+public class MemoryAutoConfig {
+
+  @Bean
+  public MemoryController memoryController() {
+    return new MemoryController(memoryFinder());
+  }
+
+  @Bean
+  public MemoryFinder memoryFinder() {
+    return new MemoryFinder();
+  }
+
+}
+```
+
+- `@AutoConfiguration`: 스프링 부트가 제공하는 자동 구성 기능 적용할 때 사용하는 애너테이션
+- `@ConditionalOnProperty`
+  - `memory=on` 이라는 환경 정보가 있을 때 라이브러리 적용(== 스프링 빈 등록)
+  - 라이브러리를 갖고 있더라도 상황에 따라서 해당 기능을 끄고 켤 수 있도록 유연한 기능 제공
+
+
+
+**자동 구성 대상 지정**
+
+- 스프링 부트 자동 구성을 적용하려면 다음 파일에 자동 구성 대상을 지정해주어야 한다.
+  - `src/main/resources/META-INF/spring/org.springframework.book.autoconfigure.AutoConfiguration.imports`
+  - 앞서 만든 자동 구성인 memory.MemoryAutoConfig 를 패키지를 포함해서 지정해준다
+- 스프링 부트는 위 위치에 있는 파일을 읽어서 자동 구성으로 사용. 따라서 내부에 있는 `MemoryAutoConfig` 가 자동으로 실행된다.
 
 
 
 ### 사용하기
 
+``` groovy
+dependencies {
+  implementation files('libs/memory-v2.jar')
+}
+```
 
+- project-v2 에서 사용하는 memory-v2 라이브러리에는 스프링 부트 자동 구성이 적용되어 있으므로 별도의 빈 등록 설정을 하지 않아도 된다!
 
 
 
@@ -450,11 +530,89 @@ public class MemoryConfig {
 
 ### 스프링 부트의 동작
 
+`@SpringBootApplication` > `@EnableAutoConfiguration`
 
+
+
+```java
+package org.springframework.boot.autoconfigure;
+
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+@AutoConfigurationPackage
+@Import({AutoConfigurationImportSelector.class})
+public @interface EnableAutoConfiguration {
+  String ENABLED_OVERRIDE_PROPERTY = "spring.boot.enableautoconfiguration";
+
+  Class<?>[] exclude() default {};
+
+  String[] excludeName() default {};
+}
+```
+
+- 이름 그대로 자동 구성을 활성화하는 애너테이션
+- `@Import({AutoConfigurationImportSelector.class})`
+  - `@Import` 는 주로 스프링 설정 정보를 포함할 때 사용..
+  - 근데 `AutoConfigurationImportSelector`는 설정 파일(`@Configuration`) 이 아니다.
 
 
 
 ### ImportSelector
 
+`@Import` 에 설정 정보를 추가하는 방법은 두 가지
+
+- 정적인 방법: `@Import(클래스)` . 코드에 대상이 딱 박혀 있음.
+
+- 동적인 방법: `@Import( ImportSelector )`. ImportSelector라는 인터페이스의 구현체를 넣어서 사용할 설정 정보를 동적으로 선택.
 
 
+
+```java
+package hello.selector;
+
+import org.springframework.context.annotation.ImportSelector;
+import org.springframework.core.type.AnnotationMetadata;
+
+public class HelloImportSelector implements ImportSelector {
+
+  @Override
+  public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+    return new String[]{"hello.selector.HelloConfig"};
+  }
+}
+```
+
+- 설정 정보를 동적으로 선택할 수 있게 하는 `ImportSelector` 구현체
+- 단순히 `hello.selector.HelloConfig` 설정 정보를 반환
+
+- SelectorConfig > @Import(HelloImportSelector.class) > HelloImportSelector > "hello.selector.HelloConfig"
+  - 스프링은 이 문자에 맞는 대상을 설정 정보로 사용한다.
+
+
+
+**@EnableAutoConfiguration 동작 방식**
+
+- 임포트하고 있는 `AutoConfigurationImportSelector`
+
+  ```java
+  public class AutoConfigurationImportSelector implements DeferredImportSelector, BeanClassLoaderAware, ResourceLoaderAware, BeanFactoryAware, EnvironmentAware, Ordered {
+    ...
+  
+    public String[] selectImports(AnnotationMetadata annotationMetadata) {
+      if (!this.isEnabled(annotationMetadata)) {
+        return NO_IMPORTS;
+      } else {
+        AutoConfigurationEntry autoConfigurationEntry = this.getAutoConfigurationEntry(annotationMetadata);
+        return StringUtils.toStringArray(autoConfigurationEntry.getConfigurations());
+      }
+    }
+  }
+  ```
+
+
+
+**남은 문제**
+
+- 빈 등록할 때 사용하는 설정 정보는 어떻게 변경해야 할까?? DB 접속 url, id, pw 등등..
