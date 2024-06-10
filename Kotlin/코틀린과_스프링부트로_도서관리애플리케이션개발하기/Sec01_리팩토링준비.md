@@ -331,8 +331,189 @@ class UserServiceTest @Autowired constructor(
 
 ## 유저 관련 기능 테스트
 
+```kotlin
+package com.group.libraryapp.service.user
 
+@SpringBootTest
+class UserServiceTest @Autowired constructor(
+    private val userRepository: UserRepository,
+    private val userService: UserService,
+) {
+
+    @Test
+    fun saveUserTest() {
+        // given
+        val request = UserCreateRequest("홍길동", null)
+
+        // when
+        userService.saveUser(request)
+
+        // then
+        val results = userRepository.findAll()
+        assertThat(results).hasSize(1)
+        assertThat(results[0].name).isEqualTo("홍길동")
+        assertThat(results[0].age).isEqualTo(null)
+    }
+
+    @Test
+    fun getUsersTest() {
+        // given
+        userRepository.saveAll(listOf(
+            User("A", 20),
+            User("B", null),
+        ))
+
+        // when
+        val result = userService.getUsers()
+
+        // then
+        assertThat(result).hasSize(2)
+        assertThat(result).extracting("name").containsExactlyInAnyOrder("A", "B")
+        assertThat(result).extracting("age").containsExactlyInAnyOrder(20, null)
+    }
+  
+    @Test
+    fun updateUserNameTest() {
+        // given
+        val saved = userRepository.save(User("A", null))
+        val request = UserUpdateRequest(saved.id, "B")
+
+        // when
+        userService.updateUserName(request)
+
+        // then
+        val result = userRepository.findAll()[0]
+        assertThat(result.name).isEqualTo("B")
+    }
+}
+```
+
+- 생성 테스트와 조회 테스트를 같이 돌리면 실패한다.
+
+  - 두 테스트는 Spring Context 를 공유하기 때문!
+
+- 테스트가 끝나면 공유 자원인 DB를 깨끗하게 지워주자.
+
+  - `@AfterEach` 애너테이션 사용
+
+    ``` kotlin
+        @AfterEach
+        fun clean() {
+            userRepository.deleteAll()
+        }
+    ```
+
+- `@DisplayName` 으로 테스트명 명시 가능
 
 
 
 ## 책 관련 기능 테스트
+
+``` kotlin
+package com.group.libraryapp.service.book
+
+@SpringBootTest
+class BookServiceTest @Autowired constructor(
+    private val bookService: BookService,
+    private val bookRepository: BookRepository,
+    private val userRepository: UserRepository,
+    private val userLoanHistoryRepository: UserLoanHistoryRepository,
+) {
+
+    @AfterEach
+    fun clean() {
+        bookRepository.deleteAll()
+        userRepository.deleteAll()
+    }
+
+    @Test
+    @DisplayName("책 등록이 정상 동작한다.")
+    fun saveBookTest() {
+        // given
+        val request = BookRequest("이상한 앨리스")
+
+        // when
+        bookService.saveBook(request)
+
+        // then
+        val books = bookRepository.findAll()
+        assertThat(books).hasSize(1)
+        assertThat(books[0].name).isEqualTo("이상한 앨리스")
+    }
+
+    @Test
+    @DisplayName("책 대출이 정상 동작한다")
+    fun loanBookTest() {
+        // given
+        bookRepository.save(Book("이상한 나라의 엘리스"))
+        val savedUser = userRepository.save(User("최태현", null))
+        val request = BookLoanRequest("최태현", "이상한 나라의 엘리스")
+
+        // when
+        bookService.loanBook(request)
+
+        // then
+        val results = userLoanHistoryRepository.findAll()
+        assertThat(results).hasSize(1)
+        assertThat(results[0].bookName).isEqualTo("이상한 나라의 엘리스")
+        assertThat(results[0].user.id).isEqualTo(savedUser.id)
+        assertThat(results[0].isReturn).isFalse
+    }
+
+    @Test
+    @DisplayName("책이 진작 대출되어 있다면, 신규 대출이 실패한다")
+    fun loanBookFailTest() {
+        // given
+        bookRepository.save(Book("이상한 나라의 엘리스"))
+        val savedUser = userRepository.save(User("최태현", null))
+        userLoanHistoryRepository.save(
+            UserLoanHistory(
+                savedUser, "이상한 나라의 엘리스", false
+            )
+        )
+        val request = BookLoanRequest("최태현", "이상한 나라의 엘리스")
+
+        // when & then
+        assertThrows<IllegalArgumentException> {
+            bookService.loanBook(request)
+        }.apply {
+            assertThat(message).isEqualTo("진작 대출되어 있는 책입니다")
+        }
+    }
+
+    @Test
+    @DisplayName("책 반납이 정상 동작한다")
+    fun returnBookTest() {
+        // given
+        bookRepository.save(Book("이상한 나라의 엘리스"))
+        val savedUser = userRepository.save(User("최태현", null))
+        userLoanHistoryRepository.save(UserLoanHistory(savedUser, "이상한 나라의 엘리스", false))
+        val request = BookReturnRequest("최태현", "이상한 나라의 엘리스")
+
+        // when
+        bookService.returnBook(request)
+
+        // then
+        val results = userLoanHistoryRepository.findAll()
+        assertThat(results).hasSize(1)
+        assertThat(results[0].isReturn).isTrue
+    }
+}
+```
+
+- `@SpringBootTest`: 스프링 애플리케이션 테스트위한 Context
+- `@Autowired constructor()`: 생성자 앞에 `@Autowired` 사용해 생성자 Bean 주입받도록
+- `@AfterEach`: 각 테스트(`@Test`)가 끝나면 실행되는 함수 지정
+- `@DisplayName`: 테스트가 실행될 때 표시될 이름 지정
+
+- 대출 정상 처리(happy case)와 대출 실패 케이스 모두 검증 필요!
+
+
+
+## 정리
+
+1. Kotlin을 사용하기 위해 필요한 설정
+2. 테스트란 무엇이고, 왜 중요한가
+3. JUnit5의 기초 사용법
+4. JUnit5와 Spring Boot를 함께 사용해 테스트를 작성하는 방법
+5. 여러 API에 대한 Service 계층 테스트 실습
