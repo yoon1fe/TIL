@@ -1,232 +1,142 @@
-## Sec 4. 엔티티 매핑
+## 객체와 테이블 매핑
 
-### 엔티티 매핑
+**엔티티 매핑**
 
-- 객체와 테이블 매핑: @Entity, @Table
-- 필드와 컬럼 매핑: @Column
-- 기본 키 매핑: @Id
-- 연관관계 매핑: @ManyToOne, @JoinColumn
+- 객체와 테이블 매핑: `@Entity`, `@Table`
+- 필드와 컬럼 매핑: `@Column`
+- 기본 키 매핑: `@Id`
+- 연관관계 매핑: `@ManyToOne`, `@JoinColumn`
 
 
 
-### 객체와 테이블 매핑
+**@Entity**
 
-#### @Entity
+- @Entity 가 붙은 클래스는 JPA가 관리하는 엔티티
+- JPA를 사용해서 테이블과 매핑할 클래스는 @Entity 필수!
+- 주의
+  - 기본 생성자 필수(파라미터 없는 public 또는 protected 생성자) - reflection 같은 기술 사용 위해..
+  - final 클래스, enum, interface, inner 클래스에 사용 X
+  - 저장할 필드에 final 사용 X
 
-- @Entity 가 붙은 클래스는 JPA가 관리(=엔티티)한다.
 
-- JPA를 사용해서 테이블과 매핑할 클래스는 @Entity 어노테이션이 필수@
+
+## DB 스키마 자동 생성
+
+- DDL을 애플리케이션 실행 시점에 자동 생성! 다만 운영 환경에서 쓰면 안되겠지
+- 테이블 중심 -> 객체 중심
+- 데이터베이스 dialect를 활용해서 데이터베이스에 맞는 적절한 DDL 생성
+- 이렇게 생성된 DDL은 **개발 장비에서만 사용!**
+- 생성된 DDL은 운영서버에서는 사용하지 않거나, 적절히 다듬은 후 사용
+
+
+
+**속성**
+
+- hibernate.hbm2ddl.auto
+  - create: DROP + CREATE TABLE
+  - create-drop: 종료 시점에 DROP TABLE
+  - update: 변경분만 반영
+  - validate: 엔티티와 테이블이 정상 매핑되었는지만 확인
+  - none: 사용하지 않음
 
 **주의**
 
-- 기본 생성자 필수 (파라미터가 없는 public 또는 protected 생성자)
-- final 클래스, enum, interface, inner 클래스 사용할 수 없다.
-- 저장할 필드에 final 사용할 수 없다.
+- 운영 장비에는 절대 create, create-drop, update 사용하면 안된다!
+- 개발 초기 단계는 create 또는 update
+- 테스트 서버는 update 또는 validate
+- 스테이징과 운영 서버는 validate 또는 none
 
-속성: name
 
-- Name - JPA에서 사용할 엔티티 이름을 지정한다. 
 
-- 디폴트는 클래스 이름과 동일
+**DDL 생성 기능**
 
-  `@Entity(name = "Member")` 
+- 제약 조건 추가: 회원 이름 필수, 10자 초과 X
+  - @Column(nullable = false, length = 10)
 
-- 헷갈리니깐 기본값 쓰자
+- 유니크 제약 조건
+  - @Table(uniqueConstraints = {@UniqueConstraint(name = "NAME_AGE_UNIQUE", columnNames = {"NAME", "AGE"} )})
+- DDL 생성 기능은 DDL을 자동 생성할 때만 사용되고, JPA 실행 로직에는 영향을 주지 않는다.
 
 
 
-#### @Table
+## 필드와 컬럼 매핑
 
-- 엔티티와 매핑할 테이블을 지정한다.
+- @Column: 컬럼 매핑 
+- @Temporal: 날짜 타입 매핑 
+- @Enumerated: enum 타입 매핑 
+- @Lob: BLOB, CLOB 매핑 
+- @Transient: 특정 필드를 컬럼에 매핑하지 않음(매핑 무시)
 
-  `@Table(name = "mbr")` -> `select * from mbr ...`
 
 
+**@Column**
 
-### 데이터베이스 스키마 자동 생성
+- name: 필드와 매핑할 테이블의 컬럼 이름
+- insertable, updatable: 등록, 변경 가능 여부
+- nullable(DDL): null 값의 허용 여부를 설정한다. false로 설정하면 DDL 생성 시에 not null 제약조건이 붙는다. 
+- unique(DDL): @Table의 uniqueConstraints와 같지만 한 컬럼에 간단히 유니크 제약조건을 걸 때 사용한다. 임의의 제약조건 이름이 생성되기 때문에 잘 안쓴다.
+- columnDefinition(DDL): 데이터베이스 컬럼 정보를 직접 줄 수 있다. ex) varchar(100) default ‘EMPTY'
+- length(DDL): 문자 길이 제약조건, String 타입에만 사용한다.
+- precision, scale(DDL): BigDecimal 타입에서 사용한다(BigInteger도 사용할 수 있다). precision은 소수점을 포함한 전체 자 릿수를, scale은 소수의 자릿수 다. 참고로 double, float 타입에는 적용되지 않는다. 아주 큰 숫자나 정 밀한 소수를 다루어야 할 때만 사용한다. 
 
-- JPA에서는 DDL을 애플리케이션 실행 시점에 자동 생성한다. 운영환경에서는 쓸 일 없겠지?
 
-- 테이블 중심 -> 객체 중심으로 넘어간다.
 
-- 데이터베이스 방언을 활용해서 데이터베이스에 맞는 적절한 DDL 생성해준다.
+**@Enumerated**
 
-- 생성된 DDL은 **개발 장비에서만 사용**하자
+- Value: EnumType.STRING: enum 이름을 DB에 저장. 디폴트 ORDINAL 인데 이거 쓰지 말자.
 
-자동 생성 속성
 
-*  참고 `<property name="hibernate.hbm2ddl.auto" value="create" />`
 
-  - 기존 테이블이 존재하면 삭제하고 새로 생성한다..
+**@Temporal**
 
-* 옵션
+- 날짜 타입(java.util.Date, java.util.Calendar)을 매핑
+- LocalDate, LocalDateTime 사용할 땐 생략 가능
 
-* create
+- value
+  - TemporalType.DATE
+  - TemporalType.TIME
+  - TemporalType.TIMESTAMP
 
-  기존 테이블 삭제 후 다시 생성 (DROP + CREATE)
 
-* create-drop
 
-  create와 같으나 종료 시점에 테이블 DROP
+## 기본 키 매핑
 
-* update
+**기본 키 매핑 애너테이션**
 
-  추가분만 반영. 멤버변수 지우는건 반영 안된다. 실수로 컬럼 날아가면 큰일난다!!! (운영 DB에는 사용하면 안된다!)
+- @Id
+- @GeneratedValue
 
-* validate
 
-  엔티티와 테이블이 정상 매핑되었는지만 확인
 
-* none
+**매핑 방법**
 
-  사용하지 않음
+- 직접 할당: @Id 만 사용
+- 자동 생성(@GeneratedValue)
+  - IDENTITY: 데이터베이스에 위임, MYSQL의 AUTO_INCREMENT
+    - 영속성 컨텍스트에 존재하려면 PK가 있어야 하는데.. IDENTITY 전략에서의 PK는 DB에 접근해봐야만 알 수 있다.
+    - 그래서 요 케이스때만 예외적으로 **em.persist()** 시점에 즉시 INSERT SQL을 실행하고 DB에서 식별자를 조회한다.
+    - 
+  - SEQUENCE: 데이터베이스 시퀀스 오브젝트 사용, ORACLE
+    - @SequenceGenerator 필요
+  - TABLE: 키 생성용 테이블 사용, 모든 DB에서 사용 
+    - @TableGenerator 필요
+    - 장점: 모든 데이터베이스에 적용 가능
+    - 단점: 성능
+  - AUTO: 방언에 따라 자동 지정, 기본값
 
-**주의할 점!**
 
-- 운영 장비에는 절대 create, create-drop, update 사용하면 안된다.
-- 개발 초기 단계 - create | update
-- 테스트 서버 - update | validate
-- 스테이징과 운영 서버 - validate | none
 
-팁: 이거 그냥 쓰지 마라.. 로컬에서만 쓰도록..!
+**권장하는 식별자 전략**
 
-alter 해버리면 전체 테이블에 Lock 걸리니깐 난리날 수도 있다..!!
+- 기본 키 제약 조건: null 아님, 유일해야 함, 변하면 안됨!
+- 미래까지 이 조건을 만족하는 자연키는 찾기 어렵다. 대리키(대체키)를 사용하자
+- **권장: Long + 대체키 + 키 생성 전략 사용**
 
 
 
-- `@Column(unique = true, length = 10)`
+## 실전 예제 1 - 요구사항 분석과 기본 매핑
 
-  DDL 자동 생성할 때 길이 제한, 유니크 키 제약조건도 생성해준다.
 
-이런 DDL 생성 기능은 JPA 실행 메커니즘 자체에 영향을 주지 않는다.
 
 
 
-### 필드와 컬럼 매핑
-
-- 예제 요구사항 추가
-  1. 회원은 일반 회원과 관리자로 구분
-  2. 회원 가입일, 수정일
-  3. 회원 설명하는 필드
-
-```java
-@Entity
-public class Member {
-
-  @Id
-  private Long id;
-
-  @Column(name = "name")	// 컬럼 매핑
-  private String username;
-
-  private Integer age;
-
-  @Enumerated(EnumType.STRING) // enum 타입 매핑
-  private RoleType roleType;
-
-  @Temporal(TemporalType.TIMESTAMP)	// 날짜 타입 매핑
-  private Date createdDate;
-
-  @Temporal(TemporalType.TIMESTAMP)
-  private Date lastModifiedDate;
-
-  @Lob	// BLOB, CLOB 매핑
-  private String description;
-
-  public Member() {
-  }
-}
-```
-
-* `@Transient` - 특정 필드를 컬럼에 매핑하고 싶지 않은 경우
-
-
-
-#### @Column
-
-| 속성                  | 설명                                                         | 기본값                              |
-| --------------------- | ------------------------------------------------------------ | ----------------------------------- |
-| name                  | 필드와 매핑할 테이블의 컬럼 이름                             | 객체의 필드 이름                    |
-| insertable, updatable | 등록, 변경 가능 여부                                         | TRUE                                |
-| nullable(DDL)         | null 값의 허용 여부. false로 설정하면 not null 제약 조건이 붙는다. |                                     |
-| unique(DDL)           | @Table의 uniqueConstraints와 같지만 한 컬럼에 간단히 유니크 제약조건 걸 때 사용. 잘 안쓴다.. 만들어봤자 유니크 제약 조건 이름이 이상하게 나온다. @Table 에서 이름을 설정할 수 있으니 여기서 걸자. |                                     |
-| columnDefinition(DDL) | 데이터베이스 컬럼 정보를 직접 줄 수 있다.                    | 필드의 자바 타입과 방언 정보를 사용 |
-| length(DDL)           | 문자 길이 제약조건, String 타입에만 사용한다.                | 255                                 |
-| precision, scale(DDL) | BigDecimal 타입에서 사용.                                    | precision=19,                       |
-
-
-
-#### @Enumerated
-
-| 속성  | 설명                                                         | 기본값           |
-| ----- | ------------------------------------------------------------ | ---------------- |
-| Value | - EnumType.ORDINAL: enum 순서를 데이터베이스에 저장<br />- EnumType.STRING: enum 이름을 데이터베이스에 저장 | EnumType.ORDINAL |
-
-**주의! ORDINAL 사용하지 않기!!**
-
-칼럼의 타입이 integer 로 생성된다!!!!
-
-enum의 값이 하나 추가되어도 기존의 테이블의 데이터가 변경되진 않기 때문에 답이 없다..
-
-
-
-#### @Temporal
-
-요샌(Java 8 이상) 사실 별로 필요 없다.
-
-LocalDate(DB에서 date), LocalDateTime(DB에서 timestamp) 사용할 때는 생략 가능하기 때문에 ^^
-
-
-
-#### @Lob
-
-매핑하는 타입이 문자면 CLOB, 나머지는 BLOB으로 매핑된다.
-
-
-
-
-
-### 기본 키 매핑
-
-- 직접 할당: `@Id`만 사용하면 된다.
-
-- 자동 생성: `@GeneratedValue`
-
-  - 옵션 - `strategy = GenerationType.****`
-
-  - `IDENTIY`
-
-    기본 키 생성을 DB에 위임, MySQL의 AUTO INCREMENT - DB야 알아서 해줘!
-
-    JPA는 보통 트랜잭션 커밋 시점에 INSERT SQL을 실행한다.
-
-    그런데, AUTO_INCREMENT는 데이터베이스에 INSERT SQL을 실행한 이후에 ID 값을 알 수 있다.
-
-    따라서 IDENTITY 전략은 em.persist(); 시점에 즉시 INSERT SQL을 실행하고 DB에서 식별자를 조회한다.
-
-  - `SEQUENCE`
-
-    데이터베이스 시퀀스 오브젝트 사용. `@SequenceGenerator` 어노테이션으로 시퀀스 생성
-
-    initialValue, allocationSize 등과 같은 속성으로 성능 최적화 가능한데.. 이건 나중에 공부해보자
-
-  - `TABLE`
-
-    키 생성 전용 테이블을 하나 만들어서 데이터베이스 시퀀스를 흉내내는 전략.
-
-    장점 - 모든 데이터베이스에 적용 가능하다.
-
-    단점 - 성능
-
-    `@TableGenerator	` 어노테이션으로 테이블 생성 
-
-  - `AUTO`: 디폴트!
-
-
-
-#### 권장하는 식별자 전략
-
-- **기본키 제약 조건**: not null, unique, 변하면 안된다(지키기 어렵다)!
-- 미래까지 이 조건을 만족하는 자연키(전화번호, 주민등록번호 등)는 찾기 어렵다. 대리키(대체키, 비즈니스와 상관없는 키)를 사용하자
-- 예를 들어 주민등록번호도 기본 키로 적절하지 않다!! 요새는 주민등록번호도 바꿀 수 있거든
-- 권장: Long 형 + 대체키 + 키 생성 전략 
