@@ -136,7 +136,68 @@
 
 ## 실전 예제 1 - 요구사항 분석과 기본 매핑
 
+**요구사항**
+
+- 회원은 상품 주문 가능
+- 주문 시 여러 종류의 상품 선택 가능
 
 
 
+회원 : 주문 = 일대다
 
+주문 : 상품 = 다대다(일대다 + 다대일)
+
+
+
+**테이블**
+
+- MEMBER
+- ORDERS
+- ORDER_ITEM
+- ITEM
+
+
+
+**Order.java**
+
+```java
+package jpabook.jpashop.domain;
+
+import java.time.LocalDateTime;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+@Entity
+@Table(name = "ORDERS")
+public class Order {
+
+  @Id @GeneratedValue
+  @Column(name = "ORDER_ID")
+  private Long id;
+
+  @Column(name = "MEMBER_ID")
+  private Long memberId;
+  private LocalDateTime orderDate;
+
+  @Enumerated(EnumType.STRING)
+  private OrderStatus status;
+
+}
+```
+
+- `Long memberId`: 객체지향적이지 않다.
+- 객체를 RDB에 맞추어 설계 == 데이터 중심의 설계
+
+
+
+**데이터 중심 설계의 문제점**
+
+- 현재 방식은 객체 설계를 테이블 설계에 맞춤
+- 테이블의 외래키를 객체에 그대로 가져옴
+- 객체 그래프 탐색이 불가능
+- 참조가 없으므로 UML도 잘못됨
