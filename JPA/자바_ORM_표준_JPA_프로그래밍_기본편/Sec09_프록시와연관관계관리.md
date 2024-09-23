@@ -131,8 +131,93 @@ public class Member {
 
 ## 영속성 전이(CASCADE)와 고아 객체
 
+**영속성 전이: CASCADE**
 
+- 특정 엔티티를 영속 상태로 만들 때 연관된 엔티티도 함께 영속 상태로 만들고 싶을 때 사용
+- 예) 부모 엔티티를 저장할 때 자식 엔티티도 함께 저장
+
+
+
+``` java
+Child child1 = new Child();
+Child child2 = new Child();
+
+Parent parent = new Parent();
+parent.addChild(child1);
+parent.addChild(child2);
+
+// 이렇게 해야 할 것 같은데
+em.persist(parent);
+em.persist(child1);
+em.persist(child2);
+```
+
+- parent 만 저장하면 알아서 child 들도 영속 상태로 변경되게 하고 싶다~면 cascade
+- Child.java: `OneToMany(mappedBy="parent", cascade=CascadeType.PERSIST)`
+
+
+
+**영속성 전이: CASCADE - 주의!**
+
+- 영속성 전이는 연관관계를 매핑하는 것과 아무 관련 없음
+- 엔티티를 영속화할 때 연관된 엔티티를 함께 영속화하는 편리함을 제공하는 기능 뿐이다!
+
+
+
+CascadeType 옵션****
+
+- **ALL: 모두 적용** - 모든 라이프사이클
+- **PERSIST: 영속** - 저장할 때만 맞춤
+- **REMOVE: 삭제**
+- MERGE: 병합
+- REFRESH
+- DETACH
+
+
+
+**고아 객체**
+
+- 부모 엔티티와 연관관계가 끊어진 자식 엔티티. 자동으로 삭제된다.
+
+- `@OneToMany(mappedBy="...", ..., orphanRemoval=true)`
+
+- ``` java
+  Parent parent1 = em.find(Parent.class, id);
+  parent1.getChildren().remove(0);	// 자식 엔티티를 컬렉션에서 제거
+  ```
+
+- `DELETE FROM CHILD WHERE ID=?;`
+
+
+
+**주의**
+
+- 참조가 제거된 엔티티는 다른 곳에서 참조하지 않는 고아 객체로 보고 삭제하는 기능이다.
+- 따라서 **참조하는 곳이 하나일 때만 사용해야 함!!**
+- **특정 엔티티가 개인 소유할 때 사용**
+- `@OneToOne`, `@OneToMany`만 가능
+
+
+
+**영속성 전이 + 고아 객체, 생명주기**
+
+- 스스로 생명주기를 관리하는 엔티티는 em.persist()로 영속화, em.remove()로 제거
+- 두 옵션 모두 활성화하면? `CascadeType.ALL + orphanRemoval=true`
+  - 부모 엔티티를 통해서 자식의 생명 주기를 관리할 수 있음
+- 도메인 주도 설계(DDD)의 Aggregate Root개념을 구현할 때 유용
 
 
 
 ## 실전 예제
+
+**글로벌 fetch 전략 설정**
+
+- 모든 연관관계를 지연 로딩으로
+- @ManyToOne, @OneToOne 은 기본이 즉시 로딩이므로 지연 로딩으로 변경
+
+
+
+**영속성 전이 설정**
+
+- Order -> Delivery 를 영속성 전이 ALL 설정
+- Order -> OrderItem 을 영속성 전이 ALL 설정
