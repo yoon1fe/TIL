@@ -227,20 +227,88 @@ List<Member> resultList = em.createQuery(jpql, Member.class)
 
 ## 서브 쿼리
 
+- `select m from Member m where m.age > (select avg(m2.age) from Member m2)`
 
+- `select m from Member m where (select count(o) from Order o where m = o.member) > 0`
+  - 서브쿼리에 m 땡겨오면 성능 저하 있음
+
+
+
+**지원 함수**
+
+- [NOT] EXISTS (subquery): 서브쿼리에 결과가 존재하면 참
+- {ALL | ANY | SOME} (subquery)
+- ALL 모두 만족하면 참
+- ANY, SOME: 같은 의미, 조건을 하나라도 만족하면 참
+- [NOT] IN (subquery): 서브쿼리의 결과 중 하나라도 같은 것이 있으면 참
+
+
+
+**JPA 서브 쿼리 한계**
+
+- JPA는 WHERE, HAVING 절에서만 서브 쿼리 사용 가능 + 하이버네이트의 지원으로 SELECT 까지
+- FROM 절의 서브 쿼리는 현재 JPQL에서 불가능
+  - 조인으로 풀 수 있으면 풀어서 해결하자
 
 
 
 ## JPQL 타입 표현과 기타식
 
-
+- 문자: ‘HELLO’, ‘She’’s’
+- 숫자: 10L(Long), 10D(Double), 10F(Float)
+- Boolean: TRUE, FALSE
+- ENUM: jpabook.MemberType.Admin (**패키지명 포함해야 함!**)
+- 엔티티 타입: TYPE(m) = Member (상속 관계에서 사용)
 
 
 
 ## 조건식(CASE 등)
 
+- 기본 CASE 식
 
+  ``` java
+  select
+   case when m.age <= 10 then '학생요금'
+   when m.age >= 60 then '경로요금'
+   else '일반요금'
+   end
+  from Member m
+  ```
+
+- 단순 CASE 식
+
+  ``` java
+  select
+   case t.name
+   when '팀A' then '인센티브110%'
+   when '팀B' then '인센티브120%'
+   else '인센티브105%'
+   end
+  from Team t
+  ```
+
+- COALESCE: 하나씩 조회해서 null이 아니면 반환
+- NULLIF: 두 값이 같으면 null 반환, 다르면 첫번째 값 반환
 
 
 
 ## JPQL 함수
+
+**기본 함수**
+
+- CONCAT
+- SUBSTRING
+- TRIM
+- LOWER, UPPER
+- LENGTH
+- LOCATE
+- ABS, SQRT, MOD
+- SIZE, INDEX(JPA 용도)
+
+
+
+**사용자 정의 함수  호출**
+
+- 하이버네이트는 사용전 방언에 추가해야 한다.
+  - 사용하는 DB 방언을 상속받고, 사용자 정의 함수를 등록
+- `select function('group_concat', i.name) from Item i`
