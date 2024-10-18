@@ -165,31 +165,165 @@
 
 ### 한계
 
+- 페치 조인 대상에는 별칭을 줄 수 없다.
+  - 하이버네이트는 가능하지만 가급적 사용하지 마라.
+- 둘 이상의 컬렉션은 페치 조인 할 수 없다.
+- 컬렉션을 페치 조인하면 페이징 API(setFirstResult, setMaxResults)를 사용할 수 없다.
+  - 일대일, 다대일같은 단일 값 연관 필드들은 페치 조인해도 페이징 가능
+  - 일대다의 경우) 데이터 뻥튀기 + 페이징해버리면 제대로된 데이터를 갖고 올 수 없다.
+  - 하이버네이트는 경고 로그를 남기고 메모리에서 페이징(매우 위험!)
 
+- 연관된 에티티들을 SQL 한 번으로 조회 - 성능 최적화
+- 엔티티에 직접 적용하는 글로벌 로딩 전략보다 우선!
+  - fetch = FetchType.LAZY 보다 먼저
+- 실무에서 글로벌 로딩 전략은 모두 지연 로딩
+- 최적화가 필요한 곳은 페치 조인을 적용하면 된다.
+
+
+
+**정리**
+
+- 모든 것을 페치 조인으로 해결할 수는 없다!
+- 페치 조인은 객체 그래프를 유지할 때 사용하면 효과적이다
+- 여러 테이블을 조인해서 엔티티가 가진 모양이 아닌 전혀 다른 결과를 내야 한다면, 페치 조인보다는 일반 조인을 사용하고, 필요한 데이터들만 조회해서 DTO로 반환하는 것이 효과적이다.
 
 
 
 ## 다형성 쿼리
 
+**TYPE**
 
+- 조회 대상을 특정 자식으로 한정
+- 예) Item 중에 Book, Movie 를 조회해라
+
+- **JPQL**
+
+  ``` java
+  select i from Item i where type(i) IN (Book, Movie)
+  ```
+
+- **SQL**
+
+  ``` sql
+  select i from i where i.DTYPE in ('B', M)
+  ```
+
+
+
+**TREAT**
+
+- 자바의 타입 캐스팅과 유사
+
+- 상속 구조에서 부모 타입을 특정 자식 타입으로 다룰 때 사용
+
+- FROM, WHERE, SELECT(하이버네이트가 지원) 사용
+
+- **JPQL**
+
+  ``` java
+  select i from Item i
+    where treat(i as Book).auth = 'kim'
+  ```
+
+- **SQL**
+
+  ``` sql
+  select i.* from Item i
+  where i.DTYPE = 'B' and i.auther = 'kim'
+  ```
 
 
 
 ## 엔티티 직접 사용
 
+**기본 키 값**
 
+- JPQL에서 엔티티를 직접 사용하면 SQL에서 해당 엔티티의 기본 키 값을 사용
+
+- **JPQL**
+
+  ``` java
+  select count(m.id) from Member m
+  select count(m) form Member m
+  ```
+
+- **SQL**
+
+  ``` sql
+  -- 위에꺼 둘다 동일한 쿼리
+  select count(m.id) as cnt from Member m
+  ```
 
 
 
 ## Named 쿼리
 
+- 미리 정의해서 이름을 부여해두고 사용하는 JPQL
+- 정적 쿼리만 가능!
+- 어노테이션, XML에 정의
+  - XML이 우선권을 가진다.
+  - XML에 정의하면 phase 등에 따라 다른걸 쓸 수 있겠지.
+- 애플리케이션 로딩 시점에 초기화 후 재사용
+- **애플리케이션 로딩 시점에 쿼리를 검증**
 
+- Spring Data JPA에서) `@Query(...)` 이게 내부적으로 @NamedQuery를 사용한다!
+
+
+
+``` java
+@Entity
+@NamedQuery(
+	name = "Member.findByUsername",
+  query = "select m from Member m where m.username = :username"
+)
+public class Member {
+  ...
+}
+
+List<Member> resultList = 
+  em.createNamedQuery("Member.findByUsername", Member.class)
+  .setParameter("username", "won")
+  .getResultList();
+```
 
 
 
 ## 벌크 연산
 
+- 재고가 10개 미만인 모든 상품의 가격을 10% 상승하려면?
+- JPA 변경 감지 기능으로 실행하려면 너무 많은 SQL 실행 
+  1. 재고가 10개 미만인 상품을 리스트로 조회한다.
+  2. 상품 엔티티의 가격을 10% 증가한다.
+  3. 트랜잭션 커밋 시점에 변경감지가 동작한다.
+
+- 변경된 데이터가 100건이라면 100번의 UPDATE SQL 실행
 
 
 
+**예제**
 
+- 쿼리 한 번으로 여러 테이블 로우 변경(엔티티)
+- executeUpdate()의 결과는 영향받은 엔티티 수를 반환
+- UPDATE, DELETE 지원
+- INSERT(insert into .. select, 하이버네이트 지원)
+
+``` java
+String qlString = "update Product p " +
+ "set p.price = p.price * 1.1 " +
+ "where p.stockAmount < :stockAmount";
+int resultCount = em.createQuery(qlString)
+ .setParameter("stockAmount", 10)
+ .executeUpdate(); 
+```
+
+
+
+**주의!**
+
+- 벌크 연산은 영속성 컨텍스트를 무시하고 DB에 직접 쿼리한다!
+
+- 어떻게 해결하나?
+
+  - 벌크 연산을 먼저 실행
+
+  - 벌크 연산 수행 후 영속성 컨텍스트 초기화
