@@ -228,25 +228,324 @@ fun moveTo(otherCage: Cage2<in T>) {
 
 ## 선언 지점 변성 / 사용 지점 변성
 
+- kotlin: `out`
+- java: `? extends`
 
+
+
+- kotlin: `in`
+- java: `? super`
+
+
+
+이런 복잡한 타입을 계속해서 퍼지게 하는 대신, 제네릭 클래스 자체를 공변시키거나 반공변시킬 수는 없을까?? `out` 사용하지 않고 `Cage2<T>` **클래스 자체를 공변**하게..
+
+- 코틀린에서는 가능하다!!
+
+
+
+```kotlin
+class Cage3<T> {
+    private val animals: MutableList<T> = mutableListOf()
+
+    fun getFirst(): T {
+        return this.animals.first()
+    }
+
+    fun getAll(): List<T> {
+        return this.animals
+    }
+}
+```
+
+- Cage3는 생산만 하는 클래스임. == 데이터를 내보내기만 함.
+
+
+
+다음 코드가 동작하게 하려면?
+
+```kotlin
+fun main() {
+    val fishCage = Cage3<Fish>()
+    val animalCage: Cage3<Animal> = fishCage
+}
+```
+
+- `class Cage3<out T>`
+- Declaration-site variance. 선언 지점 변성
+  - 참고) 메서드 파라미터 등에서 사용하는 변성은 use-site variance(사용 지점 변성)
+
+
+
+**코틀린 표준 라이브러리 예시**
+
+```kotlin
+public interface List<out E> : Collection<E> {
+    // Query Operations
+
+    override val size: Int
+    override fun isEmpty(): Boolean
+    override fun contains(element: @UnsafeVariance E): Boolean
+    override fun iterator(): Iterator<E>
+
+    // Bulk Operations
+    override fun containsAll(elements: Collection<@UnsafeVariance E>): Boolean
+    
+    ...
+    
+}
+```
+
+- 코틀린의 List는 불변 컬렉션이므로 데이터를 생산(반환)만 함. `out` 키워드 확인
+- 단, `contains()`와 같이 데이터를 소비해야 하는 함수의 경우 `@UnsafeVariance` 애너테이션을 붙여주어야 한다.
 
 
 
 ## 제네릭 제약과 제네릭 함수
 
+**제네릭 제약(Generic Constraints)**
 
+- Cage 클래스에는 동물만 넣고 싶지만, 사실 숫자나 문자열도 넣을 수 있음.
+- 타입 파라미터 T에 Animal과 그 하위 타입만 들어오게 하고 싶다면? -> 제네릭 제약
+- `class Cage5<T : Animal>` 로 정의하면 됨!
+
+
+
+```kotlin
+package advanced.generic
+
+fun main() {
+    val fishCage = Cage5<Fish>()
+    val stringCage = Cage5<String>()	// Type argument is not within its bounds.
+}
+
+class Cage5<T : Animal> {
+    private val animals: MutableList<T> = mutableListOf()
+
+    fun getFirst(): T {
+        return this.animals.first()
+    }
+
+    fun getAll(): List<T> {
+        return this.animals
+    }
+}
+```
+
+- 타입 파라미터의 상한(upper bound)를 지정.
+
+- 여러 개의 제약을 두고 싶다면 문법이 조금 달라짐.
+- `class Cage5<T>where T : Animal, T : Comparable<T>`
+
+
+
+**Null 타입 방지**
+
+- `Cage2<GoldFish?>()` 가능.
+- null 타입이 들어오는 것을 방지하기 위해 `Cage2<T : Any>`로 선언.
+  - 타입 파라미터를 `Any` 타입의 하위 타입으로 제한하여 nullable 타입을 들어오지 못하도록 막는 것.
+
+
+
+**함수에서는 제네릭**
+
+- `sorted`: `public fun <T : Comparable<T>> Iterable<T>.sorted(): List<T>`
+- 제네릭 함수를 사용하면 유틸성 기능 개발에 유용하다.
 
 
 
 ## 타입 소거와 Star Projection
 
+- 코틀린은 자바와 달리 언어 초기부터 제네릭이 고려되었기 때문에 raw type 객체를 만들 수 없다.
+- 하지만 코틀린도 JVM 위에서 동작하기 때문에 런타임 시점에 타입 정보가 사라진다. == 타입 소거(Type erasure)
 
+- `if (data is List<String>) ` : Error: Cannot check for instance of erased type: List<String\>
+  - 런타임에 타입이 소거되기 때문에 `List<String>` 타입인지 알 수 없음.
+  - start projection을 활용해 최소한 List 인지는 확인할 수 있다.
+
+
+
+**star projection**
+
+- `if (data is List<*>)`
+- 해당 타입 파라미터에 어떤 타입이 들어있는지는 모른다.
+
+
+
+**제네릭 함수에서의 타입 소거**
+
+```kotlin
+fun <T> T.toSuperString(): String {
+    println(T::class.java.name) // T가 무엇인지 런타임 때도 알 수 없기 때문에 오류가 난다
+    return "Super $this"
+}
+```
+
+
+
+주어진 리스트에 T 타입을 가진 원소가 하나라도 있는지 확인하는 코드
+
+- 제네릭을 사용해 일반화할 수 없다면, 각 타입마다 유틸 함수를 별도로 만들어야 할 것.
+
+- ```kotlin
+  // 우리가 원하는 형태
+  fun <T> List<*>.hasAnyInstanceOf(): Boolean {
+      return this.any { it -> it is T }
+  }
+  // 각 타입별로 만드는 방법
+  fun List<*>.hasAnyInstanceOfString(): Boolean {
+      return this.any { it is String }
+  }
+  fun List<*>.hasAnyInstanceOfInt(): Boolean {
+      return this.any { it is Int }
+  }
+  ```
+
+- `reified` 키워드와 inline 함수를 사용하면 해결 가능하다.
+
+  - inline 함수는 함수의 본문을 함수 호출 지점에 옮기는데, 이러한 점을 활용해 주어진 제네릭 타입 정보를 알 수 있음.
+
+  ```kotlin
+  inline fun <reified T> List<*>.hasAnyInstanceOf(): Boolean {
+      return this.any { it is T }
+  }
+  ```
+
+  - `reified` 키워드의 한계
+    - reified 키워드가 붙은 타입 T를 이용해
+    - T의 인스턴스를 만들거나
+    - T의 companion object를 가져올 수는 없다.
 
 
 
 ## 제네릭 용어 정리 및 간단한 팁
 
+**제네릭 클래스**
+
+- `class Cage<T>`
+- 타입 파리미터를 사용한 클래스
 
 
 
+**Raw 타입**
 
+- `List list = new ArrayList();`
+- 제네릭 클래스에서 타입 매개변수를 사용하지 않고 인스턴스화 하는 것
+- 코틀린에서는 Raw 타입 사용 불가
+
+
+
+**변성**
+
+- 제네릭 클래스 타입 파라미터에 따라 제네릭 클래스 간의 상속 관계가 어떻게 되는지를 나타내는 용어
+
+
+
+**무공변(불공변, in-variant)**
+
+- 타입 파라미터끼리는 상속 관계더라도, 제네릭 클래스 간에는 상속 관계가 없다는 의미
+- 변성을 부여하지 않았다면 제네릭 클래스는 기본적으로 무공변하다.
+
+
+
+**공변(co-variant)**
+
+- 타입 파라미터간의 상속 관계가 제네릭 클래스에서도 동일하게 유지된다는 의미
+- `out` 변성 애너테이션 사용
+
+
+
+**반공변(contra-variant)**
+
+- 타입 파라미터간의 상속 관계가 제네릭 클래스에서는 반대로 유지된다는 의미
+- `in`
+
+
+
+**선언 지점 변성**
+
+- 클래스 자체를 공변하거나 반공변하게 만드는 방법
+
+
+
+**사용 지점 변성**
+
+- 특정 함수나 변수에 대해 공변/반공변 만드는 방법
+
+
+
+**제네릭 제약**
+
+- 제네릭 클래스의 타입 파라미터에 제한을 거는 방법
+
+
+
+**타입 소거**
+
+- JDK 호환성을 위해 런타임때 제네릭 클래스의 타입 파라미터가 지워지는 것
+- inline 함수 + reified 키워드를 이용해 타입 소거를 일부 막을 수 있다.
+
+
+
+**star projection**
+
+- 어떤 타입이든 들어갈 수 있다는 의미
+
+
+
+### 팁
+
+**타입 파라미터 섀도잉**
+
+``` kotlin
+class Cage<T : Animal> {
+    fun <T : Animal> addAnimal(animal: T) {
+    }
+}
+```
+
+- 위 코드의 잘못된 점??
+- 함수의 T는 클래스의 타입 파라미터(T)와 같은 게 아니고, 덮어 씌운 것.
+
+- 다음과 같이 잘못 들어가도 오류가 발생하지 않게 됨.
+
+  ``` kotlin
+  val cage = Cage<GoldFish>()
+  cage.addAnimal(GoldFish("금붕어"))
+  cage.addAnimal(Carp("잉어"))
+  ```
+
+- 타입 파라미터 섀도잉은 피해야 하고, 함수 타입 파라미터를 쓰려면 이름이 겹치지 않도록 주의하자..
+
+
+
+**제네릭 클래스의 상속**
+
+```kotlin
+open class CageV1<T : Animal> {
+    fun addAnimal(animal: T) {
+    }
+}
+
+class CageV2<T : Animal> : CageV1<T>() {
+}
+
+class GoldFishCageV2 : CageV1<GoldFish>() {
+}
+```
+
+
+
+**제네릭과 Type Alias**
+
+```kotlin
+// as-is
+fun handleCacheStore(store: Map<PersonDtoKey, MutableList<PersonDto>>) {
+}
+
+// to-be
+typealias PersonDtoStore = Map<PersonDtoKey, MutableList<PersonDto>>
+
+fun handleCacheStore(store: PersonDtoStore) {
+}
+```
